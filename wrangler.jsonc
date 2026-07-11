@@ -2,32 +2,35 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "kompak-api",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-11"
-  // "compatibility_flags": [
-  //   "nodejs_compat"
-  // ],
-  // "vars": {
-  //   "MY_VAR": "my-variable"
-  // },
-  // "kv_namespaces": [
-  //   {
-  //     "binding": "MY_KV_NAMESPACE",
-  //     "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  //   }
-  // ],
+  "compatibility_date": "2026-07-11",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "vars": {
+    "API_BASE_URL": "http://localhost:8787",
+    "CORS_ORIGINS": "http://localhost:3000"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "96312d5b48234ffebdf67f661766bc1b"
+    }
+  ],
   // "r2_buckets": [
   //   {
   //     "binding": "MY_BUCKET",
   //     "bucket_name": "my-bucket"
   //   }
   // ],
-  // "d1_databases": [
-  //   {
-  //     "binding": "MY_DB",
-  //     "database_name": "my-database",
-  //     "database_id": ""
-  //   }
-  // ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "kompak-db",
+      "database_id": "f675d542-00d0-4bb4-b667-7e26cdcfc145",
+      "migrations_dir": "drizzle",
+      "remote": true
+    }
+  ],
   // "ai": {
   //   "binding": "AI"
   // },
