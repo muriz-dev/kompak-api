@@ -1,15 +1,15 @@
 import { z } from "zod";
 
 export const paramSchema = z.object({
-    id: z.string().uuid("Invalid point transaction ID"),
-    userId: z.string().uuid("Invalid user ID"),
+    id: z.uuid("Invalid point transaction ID"),
+    userId: z.uuid("Invalid user ID"),
 });
 
 export const createPointTransactionSchema = z.object({
-    userId: z.string().uuid("Invalid user ID"),
+    userId: z.uuid("Invalid user ID"),
     amount: z.number().int("Amount must be an integer"),
     transactionType: z.enum(["ATTENDANCE_REWARD", "ITEM_REDEEM"]),
-    referenceId: z.string().uuid("Invalid reference ID").optional(),
+    referenceId: z.uuid("Invalid reference ID").optional(),
 });
 
 export type ParamSchema = z.infer<typeof paramSchema>;
