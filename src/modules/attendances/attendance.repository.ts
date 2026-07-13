@@ -33,34 +33,37 @@ export const getExistingAttendance = async (c: Context, userId: string, eventId:
 export const createAttendanceTransaction = async (c: Context, attendanceId: string, user: any, eventId: string, rewardPoints: number, now: Date) => {
     const db = getDb(c.env.DB);
 
-    await db.transaction(async (tx: any) => {
-        // Insert Attendance
-        await tx.insert(attendances).values({
-            id: attendanceId,
+    const insertAttendance = db.insert(attendances).values({
+        id: attendanceId,
+        userId: user.id,
+        eventId: eventId,
+        verifiedAt: now,
+    });
+
+    if (rewardPoints > 0) {
+        const insertPoint = db.insert(pointTransactions).values({
             userId: user.id,
-            eventId: eventId,
-            verifiedAt: now,
+            amount: rewardPoints,
+            transactionType: "ATTENDANCE_REWARD",
+            referenceId: attendanceId,
         });
 
-        // Insert Point Transaction (Ledger)
-        if (rewardPoints > 0) {
-            await tx.insert(pointTransactions).values({
-                userId: user.id,
-                amount: rewardPoints,
-                transactionType: "ATTENDANCE_REWARD",
-                referenceId: attendanceId,
-            });
+        const updateUser = db.update(users)
+            .set({
+                balance: (user.balance ?? 0) + rewardPoints,
+                leaderboardPoints: (user.leaderboardPoints ?? 0) + rewardPoints,
+                updatedAt: new Date(),
+            })
+            .where(eq(users.id, user.id));
 
-            // Update User Balance and Leaderboard Points
-            await tx.update(users)
-                .set({
-                    balance: (user.balance ?? 0) + rewardPoints,
-                    leaderboardPoints: (user.leaderboardPoints ?? 0) + rewardPoints,
-                    updatedAt: new Date(),
-                })
-                .where(eq(users.id, user.id));
-        }
-    });
+        await db.batch([
+            insertAttendance,
+            insertPoint,
+            updateUser
+        ]);
+    } else {
+        await insertAttendance;
+    }
 };
 
 export default {
