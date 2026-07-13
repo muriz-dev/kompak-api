@@ -7,7 +7,7 @@ let initialized = false;
 
 export const applyMigrations = async () => {
     if (initialized) return;
-    
+
     const queries = sqlContent
         .split("--> statement-breakpoint")
         .map((q: string) => q.trim())
@@ -22,4 +22,18 @@ export const applyMigrations = async () => {
 
     await applyD1Migrations(env.DB, migrations);
     initialized = true;
+};
+
+import { sign } from "hono/jwt";
+
+export const generateTestToken = async (userId: string, role: string = "USER") => {
+    return await sign(
+        {
+            id: userId,
+            role,
+            status: "APPROVED",
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24
+        },
+        env.JWT_SECRET as string
+    );
 };
