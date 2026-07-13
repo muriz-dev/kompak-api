@@ -5,12 +5,14 @@ import type { Env } from "./types";
 
 import eventRouter from "./modules/events/event.route";
 import rewardRouter from "./modules/rewards/reward.route";
+import attendanceRouter from "./modules/attendances/attendance.route";
 
 const router = new Hono<Env>();
 
 // Modules Router
 router.route("/events", eventRouter);
 router.route("/rewards", rewardRouter);
+router.route("/attendances", attendanceRouter);
 
 // Documentation Router
 router.get("/openapi", (c, _next) =>
