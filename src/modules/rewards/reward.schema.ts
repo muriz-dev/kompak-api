@@ -6,8 +6,9 @@ export const paramSchema = z.object({
 
 export const createRewardSchema = z.object({
     name: z.string().min(1, "Reward name is required"),
-    pointsRequired: z.number().min(1, "Points required is required"),
-    stock: z.number().min(1, "Stock is required").optional(),
+    pointsRequired: z.number().min(0, "Points required cannot be negative"),
+    stock: z.number().min(0, "Stock cannot be negative").optional(),
+    category: z.string().optional(),
 });
 
 export const fullUpdateRewardSchema = createRewardSchema.clone();
