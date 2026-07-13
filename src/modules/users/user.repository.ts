@@ -1,0 +1,59 @@
+import { eq, desc } from "drizzle-orm";
+import type { Context } from "hono";
+import { getDb } from "../../db/connection";
+import { users } from "../../db/schema";
+import type { RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
+import { uuidv7 } from "uuidv7";
+
+export const create = async (c: Context, data: RegisterUserSchema) => {
+    const db = getDb(c.env.DB);
+    const id = uuidv7();
+    
+    const [user] = await db.insert(users).values({
+        id,
+        ...data,
+        status: "PENDING",
+        role: "USER"
+    }).returning();
+    
+    return user;
+};
+
+export const getAll = async (c: Context, status?: string) => {
+    const db = getDb(c.env.DB);
+    return db.query.users.findMany({
+        where: status ? eq(users.status, status) : undefined,
+        orderBy: [desc(users.createdAt)],
+    });
+};
+
+export const getById = async (c: Context, id: string) => {
+    const db = getDb(c.env.DB);
+    return db.query.users.findFirst({
+        where: eq(users.id, id),
+    });
+};
+
+export const getByEmail = async (c: Context, email: string) => {
+    const db = getDb(c.env.DB);
+    return db.query.users.findFirst({
+        where: eq(users.email, email),
+    });
+};
+
+export const updateStatus = async (c: Context, id: string, data: UpdateStatusSchema) => {
+    const db = getDb(c.env.DB);
+    const [updatedUser] = await db.update(users).set({
+        status: data.status,
+        updatedAt: new Date(),
+    }).where(eq(users.id, id)).returning();
+    return updatedUser;
+};
+
+export default {
+    create,
+    getAll,
+    getById,
+    getByEmail,
+    updateStatus
+};
