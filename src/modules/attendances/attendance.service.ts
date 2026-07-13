@@ -6,18 +6,28 @@ import type { CreateAttendanceInput } from "./attendance.schema";
 import { uuidv7 } from "uuidv7";
 
 export const recordAttendance = async (c: Context, data: CreateAttendanceInput) => {
-    // Fetch Event & User
-    const [event, user] = await Promise.all([
-        attendanceRepository.getEvent(c, data.eventId),
-        attendanceRepository.getUser(c, data.userId)
-    ]);
+    // Fetch Event
+    const event = await attendanceRepository.getEvent(c, data.eventId);
 
     if (!event) {
         throw new ApiError(404, "Event not found");
     }
 
+    // Fetch User by userId or faceEmbeddingId
+    let user;
+
+    if (data.userId) {
+        user = await attendanceRepository.getUser(c, data.userId);
+    } else if (data.faceEmbeddingId) {
+        user = await attendanceRepository.getUserByFaceEmbeddingId(c, data.faceEmbeddingId);
+    }
+
     if (!user) {
-        throw new ApiError(404, "User not found");
+        throw new ApiError(404, "User not found or Face not recognized");
+    }
+
+    if (user.status !== "APPROVED") {
+        throw new ApiError(403, "User account is pending approval or rejected");
     }
 
     const now = new Date();
