@@ -87,7 +87,7 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
         if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('D1_ERROR')) {
             throw ApiError.conflict("User has already attended this event");
         }
-
+        console.error("ATTENDANCE ERROR:", error);
         throw ApiError.server("Failed to record attendance due to server error");
     }
 
