@@ -11,6 +11,7 @@ export const users = sqliteTable("users", {
     faceEmbeddingId: text("face_embedding_id"),
     balance: integer("balance").default(0),
     leaderboardPoints: integer("leaderboard_points").default(0),
+    status: text("status").notNull().default("PENDING"),
     role: text("role").notNull().default("USER"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).default(sql`(unixepoch() * 1000)`).$onUpdate(() => new Date()),
