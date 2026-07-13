@@ -13,13 +13,15 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
         throw new ApiError(404, "Event not found");
     }
 
-    // Fetch User by userId or faceEmbeddingId
+    // Fetch User by JWT token or faceEmbeddingId
     let user;
+    const jwtPayload = c.get("jwtPayload") as any;
+    const userIdFromToken = jwtPayload?.id;
 
-    if (data.userId) {
-        user = await attendanceRepository.getUser(c, data.userId);
-    } else if (data.faceEmbeddingId) {
+    if (data.faceEmbeddingId) {
         user = await attendanceRepository.getUserByFaceEmbeddingId(c, data.faceEmbeddingId);
+    } else if (userIdFromToken) {
+        user = await attendanceRepository.getUser(c, userIdFromToken);
     }
 
     if (!user) {
