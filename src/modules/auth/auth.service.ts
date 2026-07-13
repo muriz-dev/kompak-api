@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import { sign } from "hono/jwt";
 import authRepository from "./auth.repository";
 import type { LoginSchema } from "./auth.schema";
 import { ApiError } from "../../utils/api-error";
@@ -14,13 +15,23 @@ export const login = async (c: Context, data: LoginSchema) => {
     if (user.password !== data.password) {
         throw ApiError.unauthorized("Invalid email or password");
     }
-    
-    // Return user info (tanpa password) dan token sederhana
+
     const { password, ...userWithoutPassword } = user;
+    
+    // Sign real JWT token for MVP
+    const token = await sign(
+        {
+            id: user.id,
+            role: user.role,
+            status: user.status,
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 // 1 day expiration
+        },
+        c.env.JWT_SECRET as string
+    );
     
     return {
         user: userWithoutPassword,
-        token: "dummy-jwt-token-for-mvp" // Mock token
+        token: token
     };
 };
 
