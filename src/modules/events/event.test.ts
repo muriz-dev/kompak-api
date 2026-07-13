@@ -1,11 +1,16 @@
 import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { applyMigrations, generateTestToken } from "../../test-setup";
 import app from "../../index";
+import { uuidv7 } from "uuidv7";
 
 describe("Event Module", () => {
+    let adminToken: string;
+    
     beforeAll(async () => {
         await applyMigrations();
+        const adminId = uuidv7();
+        adminToken = await generateTestToken(adminId, "ADMIN");
     });
 
     it("should create an event successfully", async () => {
@@ -21,7 +26,10 @@ describe("Event Module", () => {
 
         const res = await app.request("/events", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify(payload)
         }, env);
 

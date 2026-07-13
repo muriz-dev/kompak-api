@@ -1,13 +1,17 @@
 import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { applyMigrations, generateTestToken } from "../../test-setup";
 import app from "../../index";
+import { uuidv7 } from "uuidv7";
 
 describe("Reward Module", () => {
     let rewardId: string;
+    let adminToken: string;
 
     beforeAll(async () => {
         await applyMigrations();
+        const adminId = uuidv7();
+        adminToken = await generateTestToken(adminId, "ADMIN");
     });
 
     it("should create a reward successfully", async () => {
@@ -20,7 +24,10 @@ describe("Reward Module", () => {
 
         const res = await app.request("/rewards", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify(payload)
         }, env);
 

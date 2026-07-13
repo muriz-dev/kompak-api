@@ -1,10 +1,13 @@
 import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { applyMigrations, generateTestToken } from "../../test-setup";
 import app from "../../index";
+import { uuidv7 } from "uuidv7";
 
 describe("Point Transaction Module", () => {
     let userId: string;
+    let adminToken: string;
+    let userToken: string;
 
     beforeAll(async () => {
         await applyMigrations();
@@ -23,6 +26,10 @@ describe("Point Transaction Module", () => {
         }, env);
         const uData = await uRes.json() as any;
         userId = uData.data.id;
+
+        const adminId = uuidv7();
+        adminToken = await generateTestToken(adminId, "ADMIN");
+        userToken = await generateTestToken(userId, "USER");
     });
 
     it("should manually create a point transaction", async () => {
@@ -34,7 +41,10 @@ describe("Point Transaction Module", () => {
 
         const res = await app.request("/point-transactions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify(payload)
         }, env);
 
@@ -46,7 +56,11 @@ describe("Point Transaction Module", () => {
     });
 
     it("should retrieve a list of all point transactions", async () => {
-        const res = await app.request("/point-transactions", undefined, env);
+        const res = await app.request("/point-transactions", {
+            headers: {
+                "Authorization": `Bearer ${adminToken}`
+            }
+        }, env);
         expect(res.status).toBe(200);
         const data = await res.json() as any;
         expect(data.data.length).toBeGreaterThan(0);
@@ -57,7 +71,11 @@ describe("Point Transaction Module", () => {
     });
 
     it("should retrieve point transactions for a specific user", async () => {
-        const res = await app.request(`/point-transactions/user/${userId}`, undefined, env);
+        const res = await app.request(`/point-transactions/user/${userId}`, {
+            headers: {
+                "Authorization": `Bearer ${userToken}`
+            }
+        }, env);
         expect(res.status).toBe(200);
         const data = await res.json() as any;
         expect(data.data.length).toBe(1);

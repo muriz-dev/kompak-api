@@ -1,7 +1,8 @@
 import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { applyMigrations, generateTestToken } from "../../test-setup";
 import app from "../../index";
+import { uuidv7 } from "uuidv7";
 
 describe("Leaderboard Module", () => {
     let userId: string;
@@ -24,10 +25,17 @@ describe("Leaderboard Module", () => {
         const uData = await uRes.json() as any;
         userId = uData.data.id;
 
+        const adminId = uuidv7();
+        const adminToken = await generateTestToken(adminId, "ADMIN");
+        const userToken = await generateTestToken(userId, "USER");
+
         // 2. Approve user
         await app.request(`/users/${userId}/status`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify({ status: "APPROVED" })
         }, env);
 
@@ -48,7 +56,10 @@ describe("Leaderboard Module", () => {
         };
         const eRes = await app.request("/events", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify(eventPayload)
         }, env);
         const eData = await eRes.json() as any;
@@ -57,7 +68,10 @@ describe("Leaderboard Module", () => {
         // 4. Attend event
         await app.request("/attendances", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
             body: JSON.stringify({
                 faceEmbeddingId: "face-leader-123",
                 eventId: eventId,

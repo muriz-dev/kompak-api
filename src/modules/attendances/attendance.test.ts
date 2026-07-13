@@ -1,11 +1,14 @@
 import { env } from "cloudflare:workers";
 import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { applyMigrations, generateTestToken } from "../../test-setup";
 import app from "../../index";
+import { uuidv7 } from "uuidv7";
 
 describe("Attendance Module", () => {
     let userId: string;
     let eventId: string;
+    let userToken: string;
+    let adminToken: string;
 
     beforeAll(async () => {
         await applyMigrations();
@@ -25,6 +28,10 @@ describe("Attendance Module", () => {
         const uData = await uRes.json() as any;
         userId = uData.data.id;
 
+        const adminId = uuidv7();
+        adminToken = await generateTestToken(adminId, "ADMIN");
+        userToken = await generateTestToken(userId, "USER");
+
         const now = new Date();
         const past = new Date(now.getTime() - 1000 * 60 * 60); // 1 hr ago
         const future = new Date(now.getTime() + 1000 * 60 * 60); // 1 hr future
@@ -42,7 +49,10 @@ describe("Attendance Module", () => {
         };
         const eRes = await app.request("/events", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
             body: JSON.stringify(eventPayload)
         }, env);
         const eData = await eRes.json() as any;
@@ -58,7 +68,10 @@ describe("Attendance Module", () => {
         };
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
             body: JSON.stringify(attPayload)
         }, env);
 
@@ -70,7 +83,10 @@ describe("Attendance Module", () => {
     it("should approve user", async () => {
         const res = await app.request(`/users/${userId}/status`, {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}` // Assuming admin patches status
+            },
             body: JSON.stringify({ status: "APPROVED" })
         }, env);
 
@@ -88,7 +104,10 @@ describe("Attendance Module", () => {
         };
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
             body: JSON.stringify(attPayload)
         }, env);
 
@@ -106,7 +125,10 @@ describe("Attendance Module", () => {
         };
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
             body: JSON.stringify(attPayload)
         }, env);
 
@@ -125,7 +147,10 @@ describe("Attendance Module", () => {
         };
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
             body: JSON.stringify(attPayload)
         }, env);
 
