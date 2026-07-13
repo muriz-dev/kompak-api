@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import attendanceController from "./attendance.controller";
 import { createAttendanceSchema } from "./attendance.schema";
+import { requireAuth } from "../../middlewares/auth";
 
 const router = new Hono();
 
@@ -24,6 +25,7 @@ router.post(
             },
         },
     }),
+    requireAuth,
     validator("json", createAttendanceSchema),
     attendanceController.recordAttendance
 );
