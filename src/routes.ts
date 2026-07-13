@@ -6,6 +6,9 @@ import type { Env } from "./types";
 import eventRouter from "./modules/events/event.route";
 import rewardRouter from "./modules/rewards/reward.route";
 import attendanceRouter from "./modules/attendances/attendance.route";
+import pointTransactionRouter from "./modules/point-transactions/point-transaction.route";
+import leaderboardRouter from "./modules/leaderboards/leaderboard.route";
+import authRouter from "./modules/auth/auth.route";
 
 const router = new Hono<Env>();
 
@@ -13,6 +16,9 @@ const router = new Hono<Env>();
 router.route("/events", eventRouter);
 router.route("/rewards", rewardRouter);
 router.route("/attendances", attendanceRouter);
+router.route("/point-transactions", pointTransactionRouter);
+router.route("/leaderboard", leaderboardRouter);
+router.route("/auth", authRouter);
 
 // Documentation Router
 router.get("/openapi", (c, _next) =>
