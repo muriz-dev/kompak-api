@@ -9,6 +9,7 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:seed": "tsx src/db/seed.ts && wrangler d1 execute kompak-db --remote --file=seed.sql",
     "test": "vitest"
   },
   "dependencies": {
