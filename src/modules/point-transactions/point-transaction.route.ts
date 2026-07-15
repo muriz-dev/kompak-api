@@ -9,7 +9,9 @@ const router = new Hono();
 router.get(
     "/",
     describeRoute({
-        description: "Get all point transactions",
+        summary: "Get All Point Transactions",
+        description: "Admin: Get all point transactions",
+        tags: ["Point Transactions"],
         responses: {
             200: { description: "Point transactions retrieved successfully" },
         },
@@ -22,7 +24,9 @@ router.get(
 router.post(
     "/",
     describeRoute({
-        description: "Create a new point transaction manually",
+        summary: "Create Point Transaction",
+        description: "Admin: Create a new point transaction manually",
+        tags: ["Point Transactions"],
         responses: {
             201: { description: "Point transaction created successfully" },
         },
@@ -36,7 +40,9 @@ router.post(
 router.get(
     "/:id",
     describeRoute({
-        description: "Get a point transaction by ID",
+        summary: "Get Point Transaction by ID",
+        description: "Admin: Get a point transaction by ID",
+        tags: ["Point Transactions"],
         responses: {
             200: { description: "Point transaction retrieved successfully" },
             404: { description: "Point transaction not found" },
@@ -51,7 +57,9 @@ router.get(
 router.get(
     "/user/:userId",
     describeRoute({
+        summary: "Get User Point Transactions",
         description: "Get all point transactions for a specific user",
+        tags: ["Point Transactions"],
         responses: {
             200: { description: "User point transactions retrieved successfully" },
         },

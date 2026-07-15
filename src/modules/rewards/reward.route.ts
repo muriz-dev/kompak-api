@@ -44,7 +44,7 @@ rewardRouter.post(
     "/",
     describeRoute({
         summary: "Create Reward",
-        description: "Create a new reward.",
+        description: "Admin: Create a new reward.",
         tags: ["Rewards"],
         responses: {
             201: {
@@ -65,7 +65,7 @@ rewardRouter.put(
     "/:rewardId",
     describeRoute({
         summary: "Full Update Reward",
-        description: "Update a reward by its ID (full update).",
+        description: "Admin: Update a reward by its ID (full update).",
         tags: ["Rewards"],
         responses: {
             200: {
@@ -90,7 +90,7 @@ rewardRouter.patch(
     "/:rewardId",
     describeRoute({
         summary: "Partial Update Reward",
-        description: "Update a reward by its ID (partial update).",
+        description: "Admin: Update a reward by its ID (partial update).",
         tags: ["Rewards"],
         responses: {
             200: {
@@ -115,7 +115,7 @@ rewardRouter.delete(
     "/:rewardId",
     describeRoute({
         summary: "Remove Reward",
-        description: "Remove a reward by its ID.",
+        description: "Admin: Remove a reward by its ID.",
         tags: ["Rewards"],
         responses: {
             200: {

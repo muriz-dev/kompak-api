@@ -44,7 +44,7 @@ eventRouter.post(
     "/",
     describeRoute({
         summary: "Create Event",
-        description: "Create a new event.",
+        description: "Admin: Create a new event.",
         tags: ["Events"],
         responses: {
             201: {
@@ -65,7 +65,7 @@ eventRouter.put(
     "/:eventId",
     describeRoute({
         summary: "Full Update Event",
-        description: "Update an event by its ID (full update).",
+        description: "Admin: Update an event by its ID (full update).",
         tags: ["Events"],
         responses: {
             200: {
@@ -90,7 +90,7 @@ eventRouter.patch(
     "/:eventId",
     describeRoute({
         summary: "Partial Update Event",
-        description: "Update an event by its ID (partial update).",
+        description: "Admin: Update an event by its ID (partial update).",
         tags: ["Events"],
         responses: {
             200: {
@@ -115,7 +115,7 @@ eventRouter.delete(
     "/:eventId",
     describeRoute({
         summary: "Remove Event",
-        description: "Remove an event by its ID.",
+        description: "Admin: Remove an event by its ID.",
         tags: ["Events"],
         responses: {
             200: {

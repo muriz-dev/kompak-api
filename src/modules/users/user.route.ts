@@ -8,7 +8,9 @@ const router = new Hono();
 router.post(
     "/register",
     describeRoute({
+        summary: "Register User",
         description: "Register a new user (Status will be PENDING)",
+        tags: ["Users"],
         responses: {
             201: { description: "Registration successful" },
             400: { description: "Validation error or Email already exists" },
@@ -21,7 +23,9 @@ router.post(
 router.get(
     "/",
     describeRoute({
+        summary: "Get All Users",
         description: "Get all users (Optional query ?status=PENDING to filter)",
+        tags: ["Users"],
         responses: {
             200: { description: "Users retrieved successfully" },
         },
@@ -32,7 +36,9 @@ router.get(
 router.get(
     "/:id",
     describeRoute({
+        summary: "Get User by ID",
         description: "Get a user by ID",
+        tags: ["Users"],
         responses: {
             200: { description: "User retrieved successfully" },
             404: { description: "User not found" },
@@ -45,7 +51,9 @@ router.get(
 router.patch(
     "/:id/status",
     describeRoute({
+        summary: "Update User Status",
         description: "Admin: Approve or Reject a user",
+        tags: ["Users"],
         responses: {
             200: { description: "User status updated successfully" },
             404: { description: "User not found" },

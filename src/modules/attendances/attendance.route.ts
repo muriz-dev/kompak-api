@@ -9,7 +9,9 @@ const router = new Hono();
 router.post(
     "/",
     describeRoute({
+        summary: "Record Attendance",
         description: "Record attendance for an event based on facial recognition match.",
+        tags: ["Attendances"],
         responses: {
             201: {
                 description: "Attendance successfully recorded",
