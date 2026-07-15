@@ -32,6 +32,15 @@ router.get("/openapi", (c, _next) =>
                 description: "Kompak Service",
             },
             servers: [{ url: c.env.API_BASE_URL, description: "Local Server" }],
+            components: {
+                securitySchemes: {
+                    bearerAuth: {
+                        type: "http",
+                        scheme: "bearer",
+                        bearerFormat: "JWT",
+                    },
+                },
+            },
         },
     })(c, _next)
 );

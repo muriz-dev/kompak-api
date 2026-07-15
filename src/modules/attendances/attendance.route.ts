@@ -12,6 +12,7 @@ router.post(
         summary: "Record Attendance",
         description: "Record attendance for an event based on facial recognition match.",
         tags: ["Attendances"],
+        security: [{ bearerAuth: [] }],
         responses: {
             201: {
                 description: "Attendance successfully recorded",

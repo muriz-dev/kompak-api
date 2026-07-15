@@ -12,6 +12,7 @@ router.get(
         summary: "Get All Point Transactions",
         description: "Admin: Get all point transactions",
         tags: ["Point Transactions"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "Point transactions retrieved successfully" },
         },
@@ -27,6 +28,7 @@ router.post(
         summary: "Create Point Transaction",
         description: "Admin: Create a new point transaction manually",
         tags: ["Point Transactions"],
+        security: [{ bearerAuth: [] }],
         responses: {
             201: { description: "Point transaction created successfully" },
         },
@@ -43,6 +45,7 @@ router.get(
         summary: "Get Point Transaction by ID",
         description: "Admin: Get a point transaction by ID",
         tags: ["Point Transactions"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "Point transaction retrieved successfully" },
             404: { description: "Point transaction not found" },
@@ -60,6 +63,7 @@ router.get(
         summary: "Get User Point Transactions",
         description: "Get all point transactions for a specific user",
         tags: ["Point Transactions"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "User point transactions retrieved successfully" },
         },

@@ -46,6 +46,7 @@ rewardRouter.post(
         summary: "Create Reward",
         description: "Admin: Create a new reward.",
         tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
         responses: {
             201: {
                 description: "Reward created successfully",
@@ -67,6 +68,7 @@ rewardRouter.put(
         summary: "Full Update Reward",
         description: "Admin: Update a reward by its ID (full update).",
         tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Reward updated successfully",
@@ -92,6 +94,7 @@ rewardRouter.patch(
         summary: "Partial Update Reward",
         description: "Admin: Update a reward by its ID (partial update).",
         tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Reward updated successfully",
@@ -117,6 +120,7 @@ rewardRouter.delete(
         summary: "Remove Reward",
         description: "Admin: Remove a reward by its ID.",
         tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Reward deleted successfully",

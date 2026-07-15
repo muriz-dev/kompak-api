@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import userController from "./user.controller";
 import { paramSchema, registerUserSchema, updateStatusSchema } from "./user.schema";
+import { requireAuth, requireAdmin } from "../../middlewares/auth";
 
 const router = new Hono();
 
@@ -54,11 +55,14 @@ router.patch(
         summary: "Update User Status",
         description: "Admin: Approve or Reject a user",
         tags: ["Users"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "User status updated successfully" },
             404: { description: "User not found" },
         },
     }),
+    requireAuth,
+    requireAdmin,
     validator("param", paramSchema),
     validator("json", updateStatusSchema),
     userController.updateUserStatus

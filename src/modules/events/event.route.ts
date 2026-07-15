@@ -46,6 +46,7 @@ eventRouter.post(
         summary: "Create Event",
         description: "Admin: Create a new event.",
         tags: ["Events"],
+        security: [{ bearerAuth: [] }],
         responses: {
             201: {
                 description: "Event created successfully",
@@ -67,6 +68,7 @@ eventRouter.put(
         summary: "Full Update Event",
         description: "Admin: Update an event by its ID (full update).",
         tags: ["Events"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Event updated successfully",
@@ -92,6 +94,7 @@ eventRouter.patch(
         summary: "Partial Update Event",
         description: "Admin: Update an event by its ID (partial update).",
         tags: ["Events"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Event updated successfully",
@@ -117,6 +120,7 @@ eventRouter.delete(
         summary: "Remove Event",
         description: "Admin: Remove an event by its ID.",
         tags: ["Events"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: {
                 description: "Event deleted successfully",
