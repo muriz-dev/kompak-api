@@ -61,22 +61,26 @@ sql += `INSERT INTO "events" (id, title, description, event_date, attendance_sta
 
 // Rewards
 sql += `\n-- 3. Rewards\n`;
-const reward1Id = uuidv7();
-const reward2Id = uuidv7();
-const reward3Id = uuidv7();
+const storeReward1Id = uuidv7();
+const storeReward2Id = uuidv7();
+const eventReward1Id = uuidv7();
+const eventReward2Id = uuidv7();
+const leaderboardReward1Id = uuidv7();
 
 sql += `INSERT INTO "rewards" (id, name, points_required, stock, category, created_at, updated_at) VALUES
-(${escapeStr(reward1Id)}, 'T-Shirt Kompak', 500, 50, 'MERCHANDISE', ${now()}, ${now()}),
-(${escapeStr(reward2Id)}, 'Coffee Voucher', 150, 100, 'VOUCHER', ${now()}, ${now()}),
-(${escapeStr(reward3Id)}, 'Mechanical Keyboard', 2000, 5, 'ELECTRONICS', ${now()}, ${now()});
+(${escapeStr(storeReward1Id)}, 'T-Shirt Kompak', 500, 50, 'STORE', ${now()}, ${now()}),
+(${escapeStr(storeReward2Id)}, 'Coffee Voucher', 150, 100, 'STORE', ${now()}, ${now()}),
+(${escapeStr(eventReward1Id)}, 'Exclusive Pin', 0, 200, 'EVENT', ${now()}, ${now()}),
+(${escapeStr(eventReward2Id)}, 'Lunch Box', 0, 50, 'EVENT', ${now()}, ${now()}),
+(${escapeStr(leaderboardReward1Id)}, 'Mechanical Keyboard', 2000, 5, 'LEADERBOARD', ${now()}, ${now()});
 `;
 
 // Event Item Rewards
 sql += `\n-- 4. Event Item Rewards\n`;
 sql += `INSERT INTO "event_item_rewards" (id, event_id, reward_id, quantity, created_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(reward1Id)}, 20, ${now()}),
-(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(reward2Id)}, 50, ${now()}),
-(${escapeStr(uuidv7())}, ${escapeStr(event2Id)}, ${escapeStr(reward2Id)}, 30, ${now()});
+(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(eventReward1Id)}, 20, ${now()}),
+(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(eventReward2Id)}, 50, ${now()}),
+(${escapeStr(uuidv7())}, ${escapeStr(event2Id)}, ${escapeStr(eventReward2Id)}, 30, ${now()});
 `;
 
 // Attendances
@@ -86,17 +90,24 @@ sql += `INSERT INTO "attendances" (id, user_id, event_id, verified_at, created_a
 (${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)});
 `;
 
+// Redemptions Setup
+const redemption1Id = uuidv7();
+const redemption2Id = uuidv7();
+
 // Point Transactions
 sql += `\n-- 6. Point Transactions\n`;
 sql += `INSERT INTO "point_transactions" (id, user_id, amount, transaction_type, reference_id, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, 500, 'EARN', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, 1500, 'EARN', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)});
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, 500, 'ATTENDANCE_REWARD', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, 1500, 'ATTENDANCE_REWARD', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, -150, 'ITEM_REDEEM', ${escapeStr(redemption1Id)}, ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, -500, 'ITEM_REDEEM', ${escapeStr(redemption2Id)}, ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});
 `;
 
 // Redemptions
 sql += `\n-- 7. Redemptions\n`;
 sql += `INSERT INTO "redemptions" (id, user_id, reward_id, status, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(reward2Id)}, 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)});
+(${escapeStr(redemption1Id)}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
+(${escapeStr(redemption2Id)}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, 'PENDING', ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});
 `;
 
 // Write to file
