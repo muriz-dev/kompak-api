@@ -56,6 +56,12 @@ export const REWARD_TYPE = [
 ] as const;
 export type RewardType = (typeof REWARD_TYPE)[number];
 
+export const REWARD_SOURCE = [
+    "POINT_SHOP",
+    "LEADERBOARD",
+] as const;
+export type RewardSource = (typeof REWARD_SOURCE)[number];
+
 export const REDEMPTION_STATUS = [
     "PENDING",
     "REJECTED",
@@ -203,6 +209,12 @@ export const rewards = sqliteTable("rewards", {
         enum: REWARD_TYPE,
     }).notNull(),
 
+    source: text("source", {
+        enum: REWARD_SOURCE,
+    }).notNull(),
+
+    leaderboardPosition: integer("leaderboard_position"),
+
     status: text("status", {
         enum: REWARD_STATUS,
     })
@@ -295,6 +307,10 @@ export const attendances = sqliteTable(
             })
             .notNull(),
 
+        activityDescription: text("activity_description"),
+
+        activityPhotoUrl: text("activity_photo_url"),
+
         status: text("status", {
             enum: ATTENDANCE_STATUS,
         }).notNull(),
@@ -313,11 +329,12 @@ export const attendances = sqliteTable(
             .default(sql`(unixepoch() * 1000)`)
             .$onUpdate(() => new Date()),
     },
-    (table) => ({
-        userEventUnique: uniqueIndex(
-            "attendance_user_event_unique"
-        ).on(table.userId, table.eventId),
-    })
+    (table) => [
+        uniqueIndex("attendance_user_event_unique").on(
+            table.userId,
+            table.eventId
+        ),
+    ]
 );
 
 export const eventTransactions = sqliteTable(
