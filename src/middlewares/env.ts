@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { MiddlewareHandler } from "hono";
 import type { Env } from "../types";
+import { ApiResponse } from "../utils/api-response";
 
 // Gunakan .loose() agar Zod tidak membuang bindings seperti D1 (c.env.DB)
 const envSchema = z.object({
@@ -16,10 +17,7 @@ export const validateEnv: MiddlewareHandler<Env> = async (c, next) => {
         if (error instanceof z.ZodError) {
             console.error("❌ Validasi Environment Gagal:", JSON.stringify(error.format(), null, 2));
 
-            return c.json({
-                success: false,
-                message: "Internal Server Error: Misconfigured Environment",
-            }, 500);
+            return ApiResponse.error(c, "Internal Server Error", "Environment variable validation failed", 500);
         }
         throw error;
     }

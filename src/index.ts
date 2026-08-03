@@ -4,6 +4,7 @@ import { dbMiddleware } from "./db/connection";
 import { errorHandler } from './middlewares/error-handler';
 import type { Env } from './types';
 import router from './routes';
+import { ApiResponse } from './utils/api-response';
 
 const app = new Hono<Env>()
 
@@ -23,10 +24,7 @@ app.use("*", dbMiddleware);
 app.route("/", router);
 
 app.get("/", (c) => {
-  return c.json({
-    success: true,
-    message: "Kompak API is running",
-  });
+  return ApiResponse.ok(c, "Kompak API is running");
 });
 
 export default app

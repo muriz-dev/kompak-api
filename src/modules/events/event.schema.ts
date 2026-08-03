@@ -6,19 +6,19 @@ export const paramSchema = z.object({
 
 export const createEventSchema = z.object({
     title: z.string().min(1, "Title is required"),
-    description: z.string().optional(),
+    description: z.string(),
     eventDate: z.coerce.date({
         error: "Invalid event date",
     }),
     attendanceStartTime: z.coerce.date({
         error: "Invalid attendance start time",
-    }).optional(),
+    }),
     attendanceEndTime: z.coerce.date({
         error: "Invalid attendance end time",
-    }).optional(),
+    }),
     rewardPoints: z.number().min(0, "Reward points must be at least 0"),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
+    latitude: z.number(),
+    longitude: z.number(),
     radiusMeters: z.number().min(1).optional(),
 });
 

@@ -14,6 +14,8 @@ describe("Auth Module", () => {
             name: "Login User",
             email: "login@example.com",
             password: "password123",
+            phoneNumber: "08123456789",
+            birthDate: "1990-01-01",
             faceEmbeddingId: "face-login-123"
         };
         await app.request("/users/register", {

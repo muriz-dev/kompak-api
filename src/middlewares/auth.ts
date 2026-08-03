@@ -1,5 +1,6 @@
 import { jwt } from "hono/jwt";
 import type { Context, Next } from "hono";
+import { ApiResponse } from "../utils/api-response";
 
 export const requireAuth = async (c: Context, next: Next) => {
     try {
@@ -19,13 +20,7 @@ export const requireRole = (roles: string[]) => {
         const payload = c.get("jwtPayload") as any;
         
         if (!payload || !roles.includes(payload.role)) {
-            return c.json(
-                {
-                    success: false,
-                    message: "Forbidden: Insufficient permissions",
-                },
-                403
-            );
+            return ApiResponse.forbidden(c, "Forbidden: Insufficient permissions");
         }
         
         return next();

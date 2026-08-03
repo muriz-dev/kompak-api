@@ -7,11 +7,28 @@ import { uuidv7 } from "uuidv7";
 describe("Reward Module", () => {
     let rewardId: string;
     let adminToken: string;
+    let providerId: string;
 
     beforeAll(async () => {
         await applyMigrations();
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { users, providers } = await import("../../db/schema");
+        const db = drizzle(env.DB);
+
         const adminId = uuidv7();
+        await db.insert(users).values({
+            id: adminId, name: "Admin", email: "admin@test.com", password: "pwd",
+            faceEmbeddingId: "admin", phoneNumber: "010", role: "ADMIN", status: "ACTIVE",
+            birthDate: new Date().toISOString()
+        });
         adminToken = await generateTestToken(adminId, "ADMIN");
+
+        providerId = uuidv7();
+        await db.insert(providers).values({
+            id: providerId, ownerId: adminId, name: "Provider",
+            address: "Address", status: "VERIFIED",
+            latitude: 0, longitude: 0
+        });
     });
 
     it("should create a reward successfully", async () => {
@@ -19,7 +36,9 @@ describe("Reward Module", () => {
             name: "Test Reward",
             pointsRequired: 100,
             stock: 50,
-            category: "VOUCHER"
+            type: "VOUCHER",
+            source: "POINT_SHOP",
+            providerId: providerId
         };
 
         const res = await app.request("/rewards", {

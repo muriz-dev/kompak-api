@@ -13,6 +13,8 @@ describe("User Module", () => {
             name: "Test User",
             email: "test@example.com",
             password: "password123",
+            phoneNumber: "08123456789",
+            birthDate: "1990-01-01",
             faceEmbeddingId: "face-123"
         };
 
@@ -35,6 +37,8 @@ describe("User Module", () => {
             name: "Test User 2",
             email: "test@example.com",
             password: "password123",
+            phoneNumber: "08123456789",
+            birthDate: "1990-01-01",
             faceEmbeddingId: "face-456"
         };
 

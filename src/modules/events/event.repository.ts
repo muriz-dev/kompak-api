@@ -44,8 +44,12 @@ export const getById = async (c: Context, eventId: string) => {
  */
 export const create = async (c: Context, eventData: CreateEventSchema) => {
     const db = getDb(c.env.DB);
+    const jwtPayload = c.get("jwtPayload") as any;
 
-    const [createdEvent] = await db.insert(events).values(eventData).returning();
+    const [createdEvent] = await db.insert(events).values({
+        ...eventData,
+        createdBy: jwtPayload.id,
+    }).returning();
 
     return createdEvent;
 }

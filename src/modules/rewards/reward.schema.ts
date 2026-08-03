@@ -8,7 +8,9 @@ export const createRewardSchema = z.object({
     name: z.string().min(1, "Reward name is required"),
     pointsRequired: z.number().min(0, "Points required cannot be negative"),
     stock: z.number().min(0, "Stock cannot be negative").optional(),
-    category: z.string().optional(),
+    type: z.enum(["VOUCHER", "PRODUCT", "SERVICE", "OTHER"]),
+    source: z.enum(["POINT_SHOP", "LEADERBOARD"]),
+    providerId: z.string().min(1, "Provider ID is required"),
 });
 
 export const fullUpdateRewardSchema = createRewardSchema.clone();

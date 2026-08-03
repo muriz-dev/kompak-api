@@ -9,7 +9,16 @@ describe("Event Module", () => {
     
     beforeAll(async () => {
         await applyMigrations();
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { users } = await import("../../db/schema");
+        const db = drizzle(env.DB);
+
         const adminId = uuidv7();
+        await db.insert(users).values({
+            id: adminId, name: "Admin", email: "admin@test.com", password: "pwd",
+            faceEmbeddingId: "admin", phoneNumber: "010", role: "ADMIN", status: "ACTIVE",
+            birthDate: new Date().toISOString()
+        });
         adminToken = await generateTestToken(adminId, "ADMIN");
     });
 
@@ -18,6 +27,8 @@ describe("Event Module", () => {
             title: "Test Event",
             description: "A test event with radius",
             eventDate: new Date().toISOString(),
+            attendanceStartTime: new Date().toISOString(),
+            attendanceEndTime: new Date(Date.now() + 3600000).toISOString(),
             rewardPoints: 100,
             latitude: -6.200000,
             longitude: 106.816666,
@@ -33,8 +44,11 @@ describe("Event Module", () => {
             body: JSON.stringify(payload)
         }, env);
 
-        expect(res.status).toBe(201);
         const data = await res.json() as any;
+        if (res.status === 500) {
+            console.error("DEBUG EVENT CREATION 500 ERROR:", data);
+        }
+        expect(res.status).toBe(201);
         expect(data.message).toBe("Event created successfully");
         expect(data.data.title).toBe("Test Event");
         expect(data.data.rewardPoints).toBe(100);
