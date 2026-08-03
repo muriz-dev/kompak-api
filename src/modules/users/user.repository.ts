@@ -13,7 +13,7 @@ export const create = async (c: Context, data: RegisterUserSchema) => {
         id,
         ...data,
         status: "PENDING",
-        role: "USER"
+        role: "CITIZEN"
     }).returning();
     
     return user;
@@ -22,7 +22,7 @@ export const create = async (c: Context, data: RegisterUserSchema) => {
 export const getAll = async (c: Context, status?: string) => {
     const db = getDb(c.env.DB);
     return db.query.users.findMany({
-        where: status ? eq(users.status, status) : undefined,
+        where: status ? eq(users.status, status as any) : undefined,
         orderBy: [desc(users.createdAt)],
     });
 };

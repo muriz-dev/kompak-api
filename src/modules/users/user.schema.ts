@@ -14,7 +14,7 @@ export const registerUserSchema = z.object({
 });
 
 export const updateStatusSchema = z.object({
-    status: z.enum(["APPROVED", "REJECTED", "PENDING"]),
+    status: z.enum(["ACTIVE", "REJECTED", "PENDING"]),
 });
 
 export type ParamSchema = z.infer<typeof paramSchema>;
