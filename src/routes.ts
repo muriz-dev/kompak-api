@@ -10,6 +10,7 @@ import pointTransactionRouter from "./modules/point-transactions/point-transacti
 import leaderboardRouter from "./modules/leaderboards/leaderboard.route";
 import authRouter from "./modules/auth/auth.route";
 import userRouter from "./modules/users/user.route";
+import providerRouter from "./modules/providers/provider.route";
 
 const router = new Hono<Env>();
 
@@ -21,6 +22,7 @@ router.route("/point-transactions", pointTransactionRouter);
 router.route("/leaderboard", leaderboardRouter);
 router.route("/auth", authRouter);
 router.route("/users", userRouter);
+router.route("/providers", providerRouter);
 
 // Documentation Router
 router.get("/openapi", (c, _next) =>
