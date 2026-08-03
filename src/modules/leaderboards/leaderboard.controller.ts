@@ -20,6 +20,18 @@ export const getLeaderboard = async (ctx: LeaderboardContext) => {
     return ApiResponse.ok(ctx, "Leaderboard retrieved successfully", leaderboard);
 };
 
+export const distributeLeaderboard = async (ctx: Context) => {
+    const payload = ctx.req.valid("json" as never) as any;
+    
+    await leaderboardService.distributeAndResetLeaderboard(ctx, payload.month, payload.year);
+    
+    return ctx.json({
+        success: true,
+        message: "Leaderboard rewards and badges distributed successfully, points have been reset."
+    }, 200);
+};
+
 export default {
-    getLeaderboard
+    getLeaderboard,
+    distributeLeaderboard
 };
