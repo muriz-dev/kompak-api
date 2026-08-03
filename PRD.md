@@ -201,7 +201,7 @@ The provider management module allows businesses to sponsor rewards after admini
 
 | ID | Requirement |
 |----|-------------|
-| FR-016 | Providers shall register an account. |
+| FR-016 | Citizens shall register a business profile to become a Provider. |
 | FR-017 | Providers shall update business information. |
 | FR-018 | Providers shall manage sponsored rewards. |
 | FR-019 | Providers shall monitor reward redemptions. |
@@ -1079,13 +1079,12 @@ D -->|Yes| F[Process Request]
 
 ## 6.4 Authorization
 
-Authorization is determined by the authenticated user's role.
+Authorization is determined by the authenticated user's role. Note that Providers do not have a separate system role; they are Citizens who own a verified Provider profile.
 
 | Role | Permissions |
 |------|-------------|
 | Administrator | Full system access |
-| Citizen | Citizen features only |
-| Provider | Provider features only |
+| Citizen | Access to citizen features, and if owning a Provider profile, access to their specific Provider features |
 
 ---
 

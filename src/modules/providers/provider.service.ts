@@ -30,7 +30,7 @@ export const fullUpdateProvider = async (c: Context, providerId: string, provide
     const provider = await getProviderById(c, providerId);
     const user = c.get("jwtPayload") as any;
 
-    if (user.role === "PROVIDER" && provider.ownerId !== user.id) {
+    if (user.role !== "ADMIN" && provider.ownerId !== user.id) {
         throw ApiError.forbidden("You do not have permission to update this provider");
     }
 
@@ -41,7 +41,7 @@ export const partialUpdateProvider = async (c: Context, providerId: string, prov
     const provider = await getProviderById(c, providerId);
     const user = c.get("jwtPayload") as any;
 
-    if (user.role === "PROVIDER" && provider.ownerId !== user.id) {
+    if (user.role !== "ADMIN" && provider.ownerId !== user.id) {
         throw ApiError.forbidden("You do not have permission to update this provider");
     }
 
