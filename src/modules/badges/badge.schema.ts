@@ -4,14 +4,14 @@ import { BADGE_CATEGORY } from "../../db/schema";
 export const createBadgeDefinitionSchema = z.object({
     name: z.string().min(3).max(100),
     description: z.string().min(10),
-    icon: z.string().url().optional(),
+    icon: z.url().optional(),
     category: z.enum(BADGE_CATEGORY),
     criteria: z.string(),
 });
 
 export const awardSpecialBadgeSchema = z.object({
-    userId: z.string().uuid(),
-    badgeDefinitionId: z.string().uuid(),
+    userId: z.uuid(),
+    badgeDefinitionId: z.uuid(),
     reason: z.string().optional(),
 });
 
