@@ -66,6 +66,24 @@ export class ApiResponse<T = unknown> {
     static created<T>(c: Context, message = "Created", data?: T) {
         return ApiResponse.success(c, message, data, STATUS_CODES.CREATED);
     }
+
+    static error(
+        c: Context,
+        message: string,
+        errors?: unknown,
+        statusCode: StatusCode = STATUS_CODES.INTERNAL_SERVER_ERROR
+    ): Response {
+        return new ApiResponse({
+            success: false,
+            message,
+            errors,
+            statusCode
+        }).send(c);
+    }
+
+    static forbidden(c: Context, message = "Forbidden"): Response {
+        return ApiResponse.error(c, message, undefined, STATUS_CODES.FORBIDDEN);
+    }
 }
 
 /*
