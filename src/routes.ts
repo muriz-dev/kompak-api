@@ -12,6 +12,7 @@ import userRouter from "./modules/users/user.route";
 import providerRouter from "./modules/providers/provider.route";
 import rewardRedemptionRouter from "./modules/reward-redemptions/reward-redemption.route";
 import badgeRouter from "./modules/badges/badge.route";
+import announcementRouter from "./modules/announcements/announcement.route";
 
 const router = new Hono<Env>();
 
@@ -25,6 +26,7 @@ router.route("/users", userRouter);
 router.route("/providers", providerRouter);
 router.route("/reward-redemptions", rewardRedemptionRouter);
 router.route("/badges", badgeRouter);
+router.route("/announcements", announcementRouter);
 
 // Documentation Router
 router.get("/openapi", (c, _next) =>
