@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./event.controller";
 import { paramSchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
-import { requireAuth, requireAdmin } from "../../middlewares/auth";
+import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const eventRouter = new Hono();
 
@@ -57,7 +57,7 @@ eventRouter.post(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("json", createEventSchema),
     controller.createEvent,
 );
@@ -82,7 +82,7 @@ eventRouter.put(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     validator("json", fullUpdateEventSchema),
     controller.fullUpdateEvent,
@@ -108,7 +108,7 @@ eventRouter.patch(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     validator("json", partialUpdateEventSchema),
     controller.partialUpdateEvent,
@@ -131,7 +131,7 @@ eventRouter.delete(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     controller.removeEvent,
 );

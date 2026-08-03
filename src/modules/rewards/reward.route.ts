@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as rewardController from "./reward.controller";
 import { paramSchema, createRewardSchema, fullUpdateRewardSchema, partialUpdateRewardSchema } from "./reward.schema";
-import { requireAuth, requireAdmin } from "../../middlewares/auth";
+import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const rewardRouter = new Hono();
 
@@ -57,7 +57,7 @@ rewardRouter.post(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("json", createRewardSchema),
     rewardController.createReward,
 );
@@ -82,7 +82,7 @@ rewardRouter.put(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     validator("json", fullUpdateRewardSchema),
     rewardController.fullUpdateReward,
@@ -108,7 +108,7 @@ rewardRouter.patch(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     validator("json", partialUpdateRewardSchema),
     rewardController.partialUpdateReward,
@@ -131,7 +131,7 @@ rewardRouter.delete(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     rewardController.removeReward,
 );

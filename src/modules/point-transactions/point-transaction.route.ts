@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import pointTransactionController from "./point-transaction.controller";
 import { createPointTransactionSchema, paramSchema } from "./point-transaction.schema";
-import { requireAuth, requireAdmin } from "../../middlewares/auth";
+import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const router = new Hono();
 
@@ -18,7 +18,7 @@ router.get(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     pointTransactionController.getAllTransactions
 );
 
@@ -34,7 +34,7 @@ router.post(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("json", createPointTransactionSchema),
     pointTransactionController.createTransaction
 );
@@ -52,7 +52,7 @@ router.get(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema.pick({ id: true })),
     pointTransactionController.getTransactionById
 );

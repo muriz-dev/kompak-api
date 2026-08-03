@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import userController from "./user.controller";
 import { paramSchema, registerUserSchema, updateStatusSchema } from "./user.schema";
-import { requireAuth, requireAdmin } from "../../middlewares/auth";
+import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const router = new Hono();
 
@@ -62,7 +62,7 @@ router.patch(
         },
     }),
     requireAuth,
-    requireAdmin,
+    requireRole(['ADMIN']),
     validator("param", paramSchema),
     validator("json", updateStatusSchema),
     userController.updateUserStatus

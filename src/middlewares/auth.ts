@@ -14,18 +14,20 @@ export const requireAuth = async (c: Context, next: Next) => {
     }
 };
 
-export const requireAdmin = async (c: Context, next: Next) => {
-    const payload = c.get("jwtPayload") as any;
-    
-    if (!payload || payload.role !== "ADMIN") {
-        return c.json(
-            {
-                success: false,
-                message: "Forbidden: Admin access required",
-            },
-            403
-        );
-    }
-    
-    return next();
+export const requireRole = (roles: string[]) => {
+    return async (c: Context, next: Next) => {
+        const payload = c.get("jwtPayload") as any;
+        
+        if (!payload || !roles.includes(payload.role)) {
+            return c.json(
+                {
+                    success: false,
+                    message: "Forbidden: Insufficient permissions",
+                },
+                403
+            );
+        }
+        
+        return next();
+    };
 };
