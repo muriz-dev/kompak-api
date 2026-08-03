@@ -25,12 +25,15 @@ router.get(
     "/",
     describeRoute({
         summary: "Get All Users",
-        description: "Get all users (Optional query ?status=PENDING to filter)",
+        description: "Get all users (Admin only, Optional query ?status=PENDING to filter)",
         tags: ["Users"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "Users retrieved successfully" },
         },
     }),
+    requireAuth,
+    requireRole(['ADMIN']),
     userController.getAllUsers
 );
 
@@ -38,13 +41,15 @@ router.get(
     "/:id",
     describeRoute({
         summary: "Get User by ID",
-        description: "Get a user by ID",
+        description: "Get a user by ID (Authenticated users)",
         tags: ["Users"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "User retrieved successfully" },
             404: { description: "User not found" },
         },
     }),
+    requireAuth,
     validator("param", paramSchema),
     userController.getUserById
 );
