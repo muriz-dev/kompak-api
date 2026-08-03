@@ -3,37 +3,36 @@ import attendanceRepository from "./attendance.repository";
 import { ApiError } from "../../utils/api-error";
 import { calculateDistance } from "../../utils/geolocation";
 import type { CreateAttendanceInput } from "./attendance.schema";
-import { uuidv7 } from "uuidv7";
 
 export const recordAttendance = async (c: Context, data: CreateAttendanceInput) => {
-    // Fetch Event
     const event = await attendanceRepository.getEvent(c, data.eventId);
 
     if (!event) {
         throw new ApiError(404, "Event not found");
     }
 
-    // Fetch User by JWT token or faceEmbeddingId
-    let user;
-    const jwtPayload = c.get("jwtPayload") as any;
-    const userIdFromToken = jwtPayload?.id;
-
-    if (data.faceEmbeddingId) {
-        user = await attendanceRepository.getUserByFaceEmbeddingId(c, data.faceEmbeddingId);
-    } else if (userIdFromToken) {
-        user = await attendanceRepository.getUser(c, userIdFromToken);
+    if (event.status !== "PUBLISHED") {
+        throw new ApiError(400, "Event is not active or published");
     }
+
+    const jwtPayload = c.get("jwtPayload") as any;
+    const userId = jwtPayload?.id;
+    
+    if (!userId) {
+        throw new ApiError(401, "Unauthorized");
+    }
+
+    const user = await attendanceRepository.getUser(c, userId);
 
     if (!user) {
-        throw new ApiError(404, "User not found or Face not recognized");
+        throw new ApiError(404, "User not found");
     }
 
-    if (user.status !== "APPROVED") {
+    if (user.status !== "ACTIVE") {
         throw new ApiError(403, "User account is pending approval or rejected");
     }
 
-    const now = new Date();
-    const nowMs = now.getTime();
+    const nowMs = Date.now();
 
     // Time Window Validation
     if (!event.attendanceStartTime || !event.attendanceEndTime) {
@@ -48,9 +47,6 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
     }
 
     // Geolocation Validation
-    if (event.latitude === null || event.longitude === null) {
-        throw new ApiError(400, "Event does not have geolocation configured");
-    }
 
     const radius = event.radiusMeters ?? 50;
     const distance = calculateDistance(
@@ -73,19 +69,22 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
 
     // Database Transaction
     const rewardPoints = event.rewardPoints;
-    const attendanceId = uuidv7();
 
+    let attendanceId: string;
     try {
-        await attendanceRepository.createAttendanceTransaction(
+        attendanceId = await attendanceRepository.createAttendanceTransaction(
             c,
-            attendanceId,
-            user,
-            event.id,
-            rewardPoints,
-            now
+            {
+                userId: user.id,
+                eventId: event.id,
+                activityPhotoUrl: data.activityPhotoUrl,
+                activityDescription: data.activityDescription,
+                rewardPoints: rewardPoints,
+                currentBalance: user.balance ?? 0,
+                currentLeaderboardPoints: user.leaderboardPoints ?? 0
+            }
         );
     } catch (error: any) {
-        // Handle unique constraint violation just in case of race condition
         if (error.message?.includes('UNIQUE constraint failed') || error.message?.includes('D1_ERROR')) {
             throw ApiError.conflict("User has already attended this event");
         }
@@ -99,6 +98,17 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
     };
 };
 
+export const getMyAttendances = async (c: Context) => {
+    const jwtPayload = c.get("jwtPayload") as any;
+    return attendanceRepository.getAttendancesByUserId(c, jwtPayload.id);
+};
+
+export const getEventAttendances = async (c: Context, eventId: string) => {
+    return attendanceRepository.getAttendancesByEventId(c, eventId);
+};
+
 export default {
-    recordAttendance
+    recordAttendance,
+    getMyAttendances,
+    getEventAttendances
 };
