@@ -1,7 +1,7 @@
 import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 // @ts-ignore
-import sqlContent from "../drizzle/0000_slippery_felicia_hardy.sql?raw";
+import sqlContent from "../drizzle/0000_glossy_madame_hydra.sql?raw";
 
 let initialized = false;
 
@@ -15,7 +15,7 @@ export const applyMigrations = async () => {
 
     const migrations = [
         {
-            name: "0000_slippery_felicia_hardy.sql",
+            name: "0000_glossy_madame_hydra.sql",
             queries: queries
         }
     ];

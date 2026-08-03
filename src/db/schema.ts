@@ -536,7 +536,8 @@ export const usersRelations = relations(users, ({ many }) => ({
     eventTransactions: many(eventTransactions),
     rewardRedemptions: many(rewardRedemptions),
     createdEvents: many(events),
-    badgeAwards: many(badgeAwards),
+    badgeAwards: many(badgeAwards, { relationName: "user_badges" }),
+    awardedBadges: many(badgeAwards, { relationName: "badge_awarded_by" }),
     announcements: many(announcements),
     notifications: many(notifications),
 }));
@@ -654,6 +655,7 @@ export const badgeAwardsRelations = relations(
         user: one(users, {
             fields: [badgeAwards.userId],
             references: [users.id],
+            relationName: "user_badges",
         }),
 
         badgeDefinition: one(badgeDefinitions, {

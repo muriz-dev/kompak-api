@@ -19,96 +19,104 @@ const now = () => Date.now();
 let sql = `-- Kompak API Database Seed
 -- Generated on ${new Date().toISOString()}
 
--- 0. Clear existing data (optional, remove if you want to keep data)
-DELETE FROM "redemptions";
-DELETE FROM "point_transactions";
+-- 0. Clear existing data
+DELETE FROM "notifications";
+DELETE FROM "announcements";
+DELETE FROM "badge_awards";
+DELETE FROM "badge_definitions";
+DELETE FROM "reward_redemptions";
+DELETE FROM "event_transactions";
 DELETE FROM "attendances";
-DELETE FROM "event_item_rewards";
 DELETE FROM "rewards";
+DELETE FROM "providers";
 DELETE FROM "events";
 DELETE FROM "users";
 
--- 1. Users
 `;
 
-// Users
+// 1. Users
 const adminId = uuidv7();
 const user1Id = uuidv7();
 const user2Id = uuidv7();
 const user3Id = uuidv7();
 
-sql += `INSERT INTO "users" (id, name, email, password, status, role, balance, leaderboard_points, created_at, updated_at) VALUES
-(${escapeStr(adminId)}, 'Admin User', 'admin@kompak.app', 'admin123', 'APPROVED', 'ADMIN', 10000, 0, ${now()}, ${now()}),
-(${escapeStr(user1Id)}, 'John Doe', 'john@example.com', 'user123', 'APPROVED', 'USER', 500, 50, ${now()}, ${now()}),
-(${escapeStr(user2Id)}, 'Jane Smith', 'jane@example.com', 'user123', 'APPROVED', 'USER', 1500, 150, ${now()}, ${now()}),
-(${escapeStr(user3Id)}, 'Pending User', 'pending@example.com', 'user123', 'PENDING', 'USER', 0, 0, ${now()}, ${now()});
-`;
+sql += `-- 1. Users\n`;
+sql += `INSERT INTO "users" (id, name, phone_number, birth_date, email, password, face_embedding_id, balance, leaderboard_points, status, role, created_at, updated_at) VALUES
+(${escapeStr(adminId)}, 'Admin User', '081234567890', '1990-01-01', 'admin@kompak.app', 'admin123', 'admin-face-id', 10000, 0, 'ACTIVE', 'ADMIN', ${now()}, ${now()}),
+(${escapeStr(user1Id)}, 'John Doe', '081234567891', '1995-05-05', 'john@example.com', 'user123', 'john-face-id', 500, 50, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
+(${escapeStr(user2Id)}, 'Jane Smith', '081234567892', '1992-02-02', 'jane@example.com', 'user123', 'jane-face-id', 1500, 150, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
+(${escapeStr(user3Id)}, 'Pending User', '081234567893', '1998-08-08', 'pending@example.com', 'user123', 'pending-face-id', 0, 0, 'PENDING', 'CITIZEN', ${now()}, ${now()});\n`;
 
-// Events
-sql += `\n-- 2. Events\n`;
+// 2. Providers
+sql += `\n-- 2. Providers\n`;
+const provider1Id = uuidv7();
+sql += `INSERT INTO "providers" (id, owner_id, name, address, latitude, longitude, status, created_at, updated_at) VALUES
+(${escapeStr(provider1Id)}, ${escapeStr(adminId)}, 'Toko Kompak Makmur', 'Jl. Kebahagiaan No. 1', -6.200000, 106.816666, 'VERIFIED', ${now()}, ${now()});\n`;
+
+// 3. Events
+sql += `\n-- 3. Events\n`;
 const event1Id = uuidv7();
 const event2Id = uuidv7();
 const pastEventId = uuidv7();
-
 const oneDayMs = 24 * 60 * 60 * 1000;
 const twoHoursMs = 2 * 60 * 60 * 1000;
 
-sql += `INSERT INTO "events" (id, title, description, event_date, attendance_start_time, attendance_end_time, reward_points, latitude, longitude, radius_meters, created_at, updated_at) VALUES
-(${escapeStr(event1Id)}, 'Annual Company Gathering', 'Yearly gathering for all employees.', ${now() + oneDayMs}, ${now() + oneDayMs - twoHoursMs}, ${now() + oneDayMs + twoHoursMs}, 100, -6.200000, 106.816666, 100, ${now()}, ${now()}),
-(${escapeStr(event2Id)}, 'Tech Workshop 2026', 'Learn the latest tech stacks.', ${now() + (oneDayMs * 5)}, ${now() + (oneDayMs * 5) - twoHoursMs}, ${now() + (oneDayMs * 5) + twoHoursMs}, 50, -6.210000, 106.820000, 50, ${now()}, ${now()}),
-(${escapeStr(pastEventId)}, 'Q1 Townhall', 'Q1 results and updates.', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30) - twoHoursMs}, ${now() - (oneDayMs * 30) + twoHoursMs}, 25, -6.190000, 106.810000, 150, ${now() - (oneDayMs * 35)}, ${now() - (oneDayMs * 35)});
-`;
+sql += `INSERT INTO "events" (id, created_by, title, description, event_date, attendance_start_time, attendance_end_time, reward_points, latitude, longitude, radius_meters, status, created_at, updated_at) VALUES
+(${escapeStr(event1Id)}, ${escapeStr(adminId)}, 'Kerja Bakti RT 01', 'Membersihkan selokan dan lingkungan sekitar.', ${now() + oneDayMs}, ${now() + oneDayMs - twoHoursMs}, ${now() + oneDayMs + twoHoursMs}, 100, -6.200000, 106.816666, 100, 'PUBLISHED', ${now()}, ${now()}),
+(${escapeStr(event2Id)}, ${escapeStr(adminId)}, 'Senam Sehat Bersama', 'Senam pagi di lapangan warga.', ${now() + (oneDayMs * 5)}, ${now() + (oneDayMs * 5) - twoHoursMs}, ${now() + (oneDayMs * 5) + twoHoursMs}, 50, -6.210000, 106.820000, 50, 'PUBLISHED', ${now()}, ${now()}),
+(${escapeStr(pastEventId)}, ${escapeStr(adminId)}, 'Rapat Warga Bulanan', 'Rapat bulanan untuk membahas program kerja.', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30) - twoHoursMs}, ${now() - (oneDayMs * 30) + twoHoursMs}, 25, -6.190000, 106.810000, 150, 'CLOSED', ${now() - (oneDayMs * 35)}, ${now() - (oneDayMs * 35)});\n`;
 
-// Rewards
-sql += `\n-- 3. Rewards\n`;
+// 4. Rewards
+sql += `\n-- 4. Rewards\n`;
 const storeReward1Id = uuidv7();
 const storeReward2Id = uuidv7();
-const eventReward1Id = uuidv7();
-const eventReward2Id = uuidv7();
 const leaderboardReward1Id = uuidv7();
 
-sql += `INSERT INTO "rewards" (id, name, points_required, stock, category, created_at, updated_at) VALUES
-(${escapeStr(storeReward1Id)}, 'T-Shirt Kompak', 500, 50, 'STORE', ${now()}, ${now()}),
-(${escapeStr(storeReward2Id)}, 'Coffee Voucher', 150, 100, 'STORE', ${now()}, ${now()}),
-(${escapeStr(eventReward1Id)}, 'Exclusive Pin', 0, 200, 'EVENT', ${now()}, ${now()}),
-(${escapeStr(eventReward2Id)}, 'Lunch Box', 0, 50, 'EVENT', ${now()}, ${now()}),
-(${escapeStr(leaderboardReward1Id)}, 'Mechanical Keyboard', 2000, 5, 'LEADERBOARD', ${now()}, ${now()});
-`;
+sql += `INSERT INTO "rewards" (id, provider_id, name, points_required, stock, type, source, leaderboard_position, status, created_at, updated_at) VALUES
+(${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 'T-Shirt Kompak', 500, 50, 'PRODUCT', 'POINT_SHOP', NULL, 'ACTIVE', ${now()}, ${now()}),
+(${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 'Coffee Voucher', 150, 100, 'VOUCHER', 'POINT_SHOP', NULL, 'ACTIVE', ${now()}, ${now()}),
+(${escapeStr(leaderboardReward1Id)}, ${escapeStr(provider1Id)}, 'Sepeda Gunung', 0, 1, 'PRODUCT', 'LEADERBOARD', 1, 'ACTIVE', ${now()}, ${now()});\n`;
 
-// Event Item Rewards
-sql += `\n-- 4. Event Item Rewards\n`;
-sql += `INSERT INTO "event_item_rewards" (id, event_id, reward_id, quantity, created_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(eventReward1Id)}, 20, ${now()}),
-(${escapeStr(uuidv7())}, ${escapeStr(event1Id)}, ${escapeStr(eventReward2Id)}, 50, ${now()}),
-(${escapeStr(uuidv7())}, ${escapeStr(event2Id)}, ${escapeStr(eventReward2Id)}, 30, ${now()});
-`;
-
-// Attendances
+// 5. Attendances
 sql += `\n-- 5. Attendances\n`;
-sql += `INSERT INTO "attendances" (id, user_id, event_id, verified_at, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)});
-`;
+const att1Id = uuidv7();
+const att2Id = uuidv7();
+sql += `INSERT INTO "attendances" (id, user_id, event_id, status, verified_at, created_at, updated_at) VALUES
+(${escapeStr(att1Id)}, ${escapeStr(user1Id)}, ${escapeStr(pastEventId)}, 'PRESENT', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
+(${escapeStr(att2Id)}, ${escapeStr(user2Id)}, ${escapeStr(pastEventId)}, 'PRESENT', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)});\n`;
 
-// Redemptions Setup
-const redemption1Id = uuidv7();
-const redemption2Id = uuidv7();
+// 6. Event Transactions
+sql += `\n-- 6. Event Transactions\n`;
+sql += `INSERT INTO "event_transactions" (id, user_id, attendance_id, event_id, points, created_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(att1Id)}, ${escapeStr(pastEventId)}, 25, ${now() - (oneDayMs * 30)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(att2Id)}, ${escapeStr(pastEventId)}, 25, ${now() - (oneDayMs * 30)});\n`;
 
-// Point Transactions
-sql += `\n-- 6. Point Transactions\n`;
-sql += `INSERT INTO "point_transactions" (id, user_id, amount, transaction_type, reference_id, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, 500, 'ATTENDANCE_REWARD', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, 1500, 'ATTENDANCE_REWARD', ${escapeStr(pastEventId)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, -150, 'ITEM_REDEEM', ${escapeStr(redemption1Id)}, ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, -500, 'ITEM_REDEEM', ${escapeStr(redemption2Id)}, ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});
-`;
+// 7. Reward Redemptions
+sql += `\n-- 7. Reward Redemptions\n`;
+sql += `INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, status, created_at, updated_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 150, 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 500, 'PENDING', ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});\n`;
 
-// Redemptions
-sql += `\n-- 7. Redemptions\n`;
-sql += `INSERT INTO "redemptions" (id, user_id, reward_id, status, created_at, updated_at) VALUES
-(${escapeStr(redemption1Id)}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
-(${escapeStr(redemption2Id)}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, 'PENDING', ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});
-`;
+// 8. Badge Definitions
+sql += `\n-- 8. Badge Definitions\n`;
+const badge1Id = uuidv7();
+sql += `INSERT INTO "badge_definitions" (id, name, description, category, criteria, created_at, updated_at) VALUES
+(${escapeStr(badge1Id)}, 'Top 3 Bulan Ini', 'Masuk ke top 3 leaderboard bulanan.', 'LEADERBOARD', 'rank <= 3', ${now()}, ${now()});\n`;
+
+// 9. Badge Awards
+sql += `\n-- 9. Badge Awards\n`;
+sql += `INSERT INTO "badge_awards" (id, user_id, badge_definition_id, leaderboard_year, leaderboard_period, reason, awarded_by, awarded_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(badge1Id)}, 2026, '06', 'Juara 1 Bulan Juni', ${escapeStr(adminId)}, ${now()});\n`;
+
+// 10. Announcements
+sql += `\n-- 10. Announcements\n`;
+sql += `INSERT INTO "announcements" (id, created_by, title, description, created_at, updated_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(adminId)}, 'Selamat Datang di KOMPAK!', 'Mari berpartisipasi dan raih hadiahnya.', ${now()}, ${now()});\n`;
+
+// 11. Notifications
+sql += `\n-- 11. Notifications\n`;
+sql += `INSERT INTO "notifications" (id, user_id, title, message, type, is_read, created_at, updated_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, 'Akun Disetujui', 'Selamat, akun Anda telah disetujui!', 'ACCOUNT_APPROVED', 0, ${now()}, ${now()});\n`;
 
 // Write to file
 const outDir = path.resolve(__dirname, "../../");
