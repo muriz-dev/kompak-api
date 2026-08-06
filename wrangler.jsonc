@@ -8,7 +8,11 @@
   ],
   "vars": {
     "API_BASE_URL": "http://localhost:8787",
-    "CORS_ORIGINS": "http://localhost:3000"
+    "CORS_ORIGINS": "http://localhost:3000",
+    "S3_ENDPOINT": "https://ea73e5f4991033f74b7c1637db79a566.r2.cloudflarestorage.com",
+    "S3_REGION": "auto",
+    "S3_BUCKET_NAME": "kompak-s3",
+    "R2_PUBLIC_URL": "https://kompak-api.muriz.workers.dev/storage"
   },
   "kv_namespaces": [
     {
@@ -16,12 +20,12 @@
       "id": "96312d5b48234ffebdf67f661766bc1b"
     }
   ],
-  // "r2_buckets": [
-  //   {
-  //     "binding": "MY_BUCKET",
-  //     "bucket_name": "my-bucket"
-  //   }
-  // ],
+  "r2_buckets": [
+    {
+      "binding": "BUCKET",
+      "bucket_name": "kompak-s3"
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",
