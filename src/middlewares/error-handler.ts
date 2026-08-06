@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import { ApiError } from "../utils/api-error";
+import { HTTPException } from "hono/http-exception";
 
 export const errorHandler = (err: unknown, c: Context): Response => {
     let statusCode = 500;
@@ -11,6 +12,9 @@ export const errorHandler = (err: unknown, c: Context): Response => {
         statusCode = err.statusCode;
         message = err.message;
         errors = err.errors;
+    } else if (err instanceof HTTPException) {
+        statusCode = err.status;
+        message = err.message;
     } else if (err instanceof Error) {
         message = err.message;
     }

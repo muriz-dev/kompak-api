@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 import { sign } from "hono/jwt";
 import authRepository from "./auth.repository";
+import userRepository from "../users/user.repository";
 import type { LoginSchema } from "./auth.schema";
 import { ApiError } from "../../utils/api-error";
 import { comparePassword } from "../../utils/password";
@@ -36,6 +37,16 @@ export const login = async (c: Context, data: LoginSchema) => {
     };
 };
 
+export const getMe = async (c: Context, id: string) => {
+    const user = await userRepository.getById(c, id);
+    if (!user) {
+        throw ApiError.notFound("User not found");
+    }
+    const { password, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+};
+
 export default {
-    login
+    login,
+    getMe
 };

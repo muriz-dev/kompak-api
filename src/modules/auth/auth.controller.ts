@@ -20,6 +20,18 @@ export const login = async (ctx: AuthContext) => {
     return ApiResponse.ok(ctx, "Login successful", result);
 };
 
+export const getMe = async (ctx: Context<Env>) => {
+    const payload = ctx.get("jwtPayload") as { id: string };
+    const user = await authService.getMe(ctx, payload.id);
+    return ApiResponse.ok(ctx, "Current session retrieved successfully", user);
+};
+
+export const logout = async (ctx: Context<Env>) => {
+    return ApiResponse.ok(ctx, "Logged out successfully");
+};
+
 export default {
-    login
+    login,
+    getMe,
+    logout
 };
