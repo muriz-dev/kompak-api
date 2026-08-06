@@ -39,7 +39,11 @@ export const getAttendancesByEventId = async (c: Context, eventId: string) => {
         where: eq(attendances.eventId, eventId),
         orderBy: [desc(attendances.createdAt)],
         with: {
-            user: true
+            user: {
+                columns: {
+                    password: false
+                }
+            }
         }
     });
 };

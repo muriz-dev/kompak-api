@@ -8,7 +8,11 @@ export const getAll = async (c: Context) => {
     const db = getDb(c.env.DB);
     return await db.query.providers.findMany({
         with: {
-            owner: true
+            owner: {
+                columns: {
+                    password: false
+                }
+            }
         }
     });
 }
@@ -18,7 +22,11 @@ export const getById = async (c: Context, providerId: string) => {
     return await db.query.providers.findFirst({
         where: eq(providers.id, providerId),
         with: {
-            owner: true
+            owner: {
+                columns: {
+                    password: false
+                }
+            }
         }
     });
 }

@@ -31,7 +31,7 @@ export const generateTestToken = async (userId: string, role: string = "USER") =
         {
             id: userId,
             role,
-            status: "APPROVED",
+            status: "ACTIVE",
             exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24
         },
         env.JWT_SECRET as string

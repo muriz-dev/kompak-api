@@ -16,7 +16,11 @@ export const getById = async (c: Context, id: string) => {
     return db.query.rewardRedemptions.findFirst({
         where: eq(rewardRedemptions.id, id),
         with: {
-            user: true,
+            user: {
+                columns: {
+                    password: false
+                }
+            },
             reward: true,
             provider: true
         }
@@ -41,7 +45,11 @@ export const getByProviderId = async (c: Context, providerId: string) => {
         where: eq(rewardRedemptions.providerId, providerId),
         orderBy: [desc(rewardRedemptions.createdAt)],
         with: {
-            user: true,
+            user: {
+                columns: {
+                    password: false
+                }
+            },
             reward: true
         }
     });
