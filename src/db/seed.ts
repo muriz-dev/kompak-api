@@ -2,6 +2,7 @@ import { uuidv7 } from "uuidv7";
 import * as fs from "fs";
 import * as path from "path";
 import { fileURLToPath } from "url";
+import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -40,12 +41,15 @@ const user1Id = uuidv7();
 const user2Id = uuidv7();
 const user3Id = uuidv7();
 
+const adminHash = bcrypt.hashSync('admin123', 10);
+const userHash = bcrypt.hashSync('user123', 10);
+
 sql += `-- 1. Users\n`;
 sql += `INSERT INTO "users" (id, name, phone_number, birth_date, email, password, face_embedding_id, balance, leaderboard_points, status, role, created_at, updated_at) VALUES
-(${escapeStr(adminId)}, 'Admin User', '081234567890', '1990-01-01', 'admin@kompak.app', 'admin123', 'admin-face-id', 10000, 0, 'ACTIVE', 'ADMIN', ${now()}, ${now()}),
-(${escapeStr(user1Id)}, 'John Doe', '081234567891', '1995-05-05', 'john@example.com', 'user123', 'john-face-id', 500, 50, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
-(${escapeStr(user2Id)}, 'Jane Smith', '081234567892', '1992-02-02', 'jane@example.com', 'user123', 'jane-face-id', 1500, 150, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
-(${escapeStr(user3Id)}, 'Pending User', '081234567893', '1998-08-08', 'pending@example.com', 'user123', 'pending-face-id', 0, 0, 'PENDING', 'CITIZEN', ${now()}, ${now()});\n`;
+(${escapeStr(adminId)}, 'Admin User', '081234567890', '1990-01-01', 'admin@kompak.app', ${escapeStr(adminHash)}, 'admin-face-id', 10000, 0, 'ACTIVE', 'ADMIN', ${now()}, ${now()}),
+(${escapeStr(user1Id)}, 'John Doe', '081234567891', '1995-05-05', 'john@example.com', ${escapeStr(userHash)}, 'john-face-id', 500, 50, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
+(${escapeStr(user2Id)}, 'Jane Smith', '081234567892', '1992-02-02', 'jane@example.com', ${escapeStr(userHash)}, 'jane-face-id', 1500, 150, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
+(${escapeStr(user3Id)}, 'Pending User', '081234567893', '1998-08-08', 'pending@example.com', ${escapeStr(userHash)}, 'pending-face-id', 0, 0, 'PENDING', 'CITIZEN', ${now()}, ${now()});\n`;
 
 // 2. Providers
 sql += `\n-- 2. Providers\n`;

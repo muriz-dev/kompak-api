@@ -3,6 +3,7 @@ import { sign } from "hono/jwt";
 import authRepository from "./auth.repository";
 import type { LoginSchema } from "./auth.schema";
 import { ApiError } from "../../utils/api-error";
+import { comparePassword } from "../../utils/password";
 
 export const login = async (c: Context, data: LoginSchema) => {
     const user = await authRepository.getUserByEmail(c, data.email);
@@ -11,8 +12,8 @@ export const login = async (c: Context, data: LoginSchema) => {
         throw ApiError.unauthorized("Invalid email or password");
     }
     
-    // Sederhana: cek password langsung (tanpa hashing untuk versi MVP)
-    if (user.password !== data.password) {
+    const isPasswordValid = await comparePassword(data.password, user.password);
+    if (!isPasswordValid) {
         throw ApiError.unauthorized("Invalid email or password");
     }
 

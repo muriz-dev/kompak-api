@@ -17,6 +17,7 @@
     "@aws-sdk/s3-request-presigner": "^3.1103.0",
     "@hono/standard-validator": "^0.2.3",
     "@scalar/hono-api-reference": "^0.11.9",
+    "bcryptjs": "^3.0.3",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.12.28",
@@ -27,6 +28,7 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.18.4",
     "@cloudflare/workers-types": "^5.20260712.1",
+    "@types/bcryptjs": "^3.0.0",
     "@types/node": "^26.1.1",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.0",

@@ -2,6 +2,7 @@ import type { Context } from "hono";
 import userRepository from "./user.repository";
 import type { RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
 import { ApiError } from "../../utils/api-error";
+import { hashPassword } from "../../utils/password";
 
 export const register = async (c: Context, data: RegisterUserSchema) => {
     // Check if email already exists
@@ -9,6 +10,9 @@ export const register = async (c: Context, data: RegisterUserSchema) => {
     if (existingUser) {
         throw ApiError.badRequest("Email already registered");
     }
+    
+    // Hash password before saving
+    data.password = await hashPassword(data.password);
     
     return userRepository.create(c, data);
 };
