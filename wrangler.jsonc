@@ -6,8 +6,9 @@
   "compatibility_flags": [
     "nodejs_compat"
   ],
+  "keep_vars": true,
   "vars": {
-    "API_BASE_URL": "http://localhost:8787",
+    "API_BASE_URL": "https://kompak-api.muriz.workers.dev",
     "CORS_ORIGINS": "http://localhost:3000",
     "S3_ENDPOINT": "https://ea73e5f4991033f74b7c1637db79a566.r2.cloudflarestorage.com",
     "S3_REGION": "auto",
