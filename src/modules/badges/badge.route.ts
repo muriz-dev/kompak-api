@@ -10,7 +10,7 @@ router.get(
     "/",
     describeRoute({
         summary: "Get Badge Definitions",
-        description: "Retrieve all available badge definitions.",
+        description: "Retrieves all available badge definitions in the system. Use this to render a 'Badge Catalog' or 'Achievements Guide' for citizens.",
         tags: ["Badges"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -25,7 +25,7 @@ router.post(
     "/",
     describeRoute({
         summary: "Create Badge Definition",
-        description: "Create a new badge definition (Admin only).",
+        description: "Admin ONLY. Defines a new badge (e.g., 'First Blood', 'Top Contributor').",
         tags: ["Badges"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -43,7 +43,7 @@ router.get(
     "/me",
     describeRoute({
         summary: "Get My Badges",
-        description: "Retrieve badges awarded to the currently logged-in user.",
+        description: "Retrieves the list of badges currently owned by the logged-in citizen. Ideal for displaying on the user profile.",
         tags: ["Badges"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -58,7 +58,7 @@ router.post(
     "/award",
     describeRoute({
         summary: "Award Special Badge",
-        description: "Manually award a SPECIAL category badge to a user (Admin only).",
+        description: "Admin ONLY. Manually grants a badge with the 'SPECIAL' category to a specific user (e.g., 'Hero of the Month').",
         tags: ["Badges"],
         security: [{ bearerAuth: [] }],
         responses: {

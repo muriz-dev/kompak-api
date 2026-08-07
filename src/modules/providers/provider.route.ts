@@ -10,7 +10,7 @@ providerRouter.get(
     "/",
     describeRoute({
         summary: "Get All Providers",
-        description: "Retrieve a list of all providers.",
+        description: "Retrieves a list of all registered providers (e.g., local businesses or sponsors).",
         tags: ["Providers"],
         responses: {
             200: {
@@ -44,7 +44,7 @@ providerRouter.post(
     "/",
     describeRoute({
         summary: "Create Provider",
-        description: "Create a new provider.",
+        description: "Registers a citizen as a new provider. The newly created provider will have a 'PENDING' status and cannot offer rewards until approved by an admin.",
         tags: ["Providers"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -117,7 +117,7 @@ providerRouter.patch(
     "/:providerId/status",
     describeRoute({
         summary: "Update Provider Status",
-        description: "Admin: Update the status of a provider (e.g. approve or reject).",
+        description: "Admin ONLY. Approves (VERIFIED) or Rejects (REJECTED) a pending provider registration.",
         tags: ["Providers"],
         security: [{ bearerAuth: [] }],
         responses: {

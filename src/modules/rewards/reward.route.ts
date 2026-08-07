@@ -10,7 +10,7 @@ rewardRouter.get(
     "/",
     describeRoute({
         summary: "Get All Rewards",
-        description: "Retrieve a list of all rewards. Can optionally filter by source (POINT_SHOP or LEADERBOARD).",
+        description: "Retrieves a catalog of available rewards. Pass `?source=POINT_SHOP` to get items redeemable with points, or `?source=LEADERBOARD` to see prizes reserved for top-ranking citizens.",
         tags: ["Rewards"],
         responses: {
             200: {
@@ -45,7 +45,7 @@ rewardRouter.post(
     "/",
     describeRoute({
         summary: "Create Reward",
-        description: "Admin/Provider: Create a new reward.",
+        description: "Creates a new reward offering. Accessible by Admins OR by Citizens who own a VERIFIED provider account.",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -67,7 +67,7 @@ rewardRouter.put(
     "/:rewardId",
     describeRoute({
         summary: "Full Update Reward",
-        description: "Admin/Provider: Update a reward by its ID (full update).",
+        description: "Replaces the entire reward record. Accessible by Admins or the Provider who owns this reward.",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -93,7 +93,7 @@ rewardRouter.patch(
     "/:rewardId",
     describeRoute({
         summary: "Partial Update Reward",
-        description: "Admin/Provider: Update a reward by its ID (partial update).",
+        description: "Updates specific fields of a reward (e.g., deducting stock). Accessible by Admins or the Provider who owns this reward.",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {

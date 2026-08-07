@@ -10,7 +10,7 @@ router.get(
     "/",
     describeRoute({
         summary: "Get Leaderboard",
-        description: "Get the community leaderboard based on reputation points",
+        description: "Fetches the community leaderboard ranking. Ranks are strictly based on the `leaderboardPoints` of each citizen (descending). You can filter by passing `?period=YYYY-MM` (e.g. 2026-08).",
         tags: ["Leaderboards"],
         responses: {
             200: { description: "Leaderboard retrieved successfully" },
@@ -24,7 +24,7 @@ router.post(
     "/distribute",
     describeRoute({
         summary: "Distribute Leaderboard Rewards & Badges",
-        description: "Process monthly leaderboard, award badges and rewards to Top 3 citizens, and reset all leaderboard points to 0. (Admin only)",
+        description: "Admin ONLY. Automatically processes the end-of-month leaderboard. It awards badges and rewards to the Top 3 ranking citizens for the specified period, and then resets all `leaderboardPoints` back to 0 for the next period.",
         tags: ["Leaderboards"],
         security: [{ bearerAuth: [] }],
         responses: {

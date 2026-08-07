@@ -11,7 +11,7 @@ rewardRedemptionRouter.get(
     "/",
     describeRoute({
         summary: "Get All Redemptions",
-        description: "Admin: Retrieve a list of all reward redemptions.",
+        description: "Admin ONLY. Retrieves a system-wide list of all reward redemption transactions.",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -27,7 +27,7 @@ rewardRedemptionRouter.get(
     "/me",
     describeRoute({
         summary: "Get My Redemptions",
-        description: "Retrieve all redemptions made by the authenticated user.",
+        description: "Retrieves the reward redemption history for the currently logged-in citizen. Useful for showing a 'My Vouchers' or 'My Prizes' screen.",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -42,7 +42,7 @@ rewardRedemptionRouter.get(
     "/provider/:providerId",
     describeRoute({
         summary: "Get Provider Redemptions",
-        description: "Admin/Provider: Retrieve all redemptions for a specific provider.",
+        description: "Admin or Provider ONLY. Retrieves all redemption transactions for rewards offered by a specific provider. Providers use this to see who has claimed their rewards.",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -59,7 +59,7 @@ rewardRedemptionRouter.get(
     "/:redemptionId",
     describeRoute({
         summary: "Get Redemption by ID",
-        description: "Retrieve a specific redemption by its ID.",
+        description: "Retrieves the full details of a specific reward redemption transaction, including its current status (e.g., PENDING, COMPLETED, CANCELLED).",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -76,7 +76,7 @@ rewardRedemptionRouter.post(
     "/",
     describeRoute({
         summary: "Create Reward Redemption",
-        description: "Redeem a reward using user points.",
+        description: "Allows a citizen to spend their accumulated points to redeem a specific reward. The system automatically deducts points and decreases reward stock. The initial status is PENDING.",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -93,7 +93,7 @@ rewardRedemptionRouter.patch(
     "/:redemptionId/status",
     describeRoute({
         summary: "Update Redemption Status",
-        description: "Admin/Provider: Update the status of a redemption (e.g. approve or reject).",
+        description: "Admin or Provider ONLY. Updates the lifecycle status of a redemption. Providers can use this to mark a prize as COMPLETED when the citizen physically claims it at their store.",
         tags: ["Reward Redemptions"],
         security: [{ bearerAuth: [] }],
         responses: {

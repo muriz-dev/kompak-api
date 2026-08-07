@@ -11,7 +11,7 @@ router.post(
     "/",
     describeRoute({
         summary: "Record Attendance",
-        description: "Record attendance for an event.",
+        description: "Submits an attendance check-in. The frontend MUST provide the user's current GPS coordinates (latitude/longitude) and a base64 encoded photo for Face Verification. The system validates if the user is within the event's radius and time window before awarding points.",
         tags: ["Attendances"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -30,7 +30,7 @@ router.get(
     "/me",
     describeRoute({
         summary: "Get My Attendances",
-        description: "Retrieve attendance history for the currently logged-in user.",
+        description: "Retrieves the historical attendance records for the currently logged-in citizen. Useful for rendering a 'My Activities' or 'History' tab in the app.",
         tags: ["Attendances"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -45,7 +45,7 @@ router.get(
     "/event/:eventId",
     describeRoute({
         summary: "Get Event Attendances",
-        description: "Retrieve all attendances for a specific event (Admin only).",
+        description: "Admin ONLY. Retrieves a list of all citizens who successfully attended a specific event. Used for reporting and CMS dashboards.",
         tags: ["Attendances"],
         security: [{ bearerAuth: [] }],
         responses: {

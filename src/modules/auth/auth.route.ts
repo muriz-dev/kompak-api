@@ -11,7 +11,7 @@ router.post(
     "/login",
     describeRoute({
         summary: "Login",
-        description: "Simple login endpoint for MVP",
+        description: "Authenticates a user using email and password. Returns a JWT access token upon success. The frontend should store this token securely (e.g., Secure Storage or HTTP-Only Cookies) and attach it as a Bearer token in the Authorization header for subsequent protected requests.",
         tags: ["Auth"],
         responses: {
             200: { description: "Login successful" },
@@ -26,7 +26,7 @@ router.get(
     "/me",
     describeRoute({
         summary: "Get Current User",
-        description: "Get the profile of the currently logged-in user",
+        description: "Retrieves the full profile of the currently authenticated user based on the provided JWT token. Use this on initial app load to verify session validity and populate user contexts (e.g., displaying the user's name, balance, or role).",
         tags: ["Auth"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -42,7 +42,7 @@ router.post(
     "/logout",
     describeRoute({
         summary: "Logout",
-        description: "Logout the current user (Dummy endpoint for stateless JWT)",
+        description: "Logs out the current user. Since the API uses stateless JWTs, this endpoint primarily serves as a hook for server-side analytics or future token blacklisting. The frontend MUST actively clear the JWT token from local storage/cookies upon a successful response.",
         tags: ["Auth"],
         security: [{ bearerAuth: [] }],
         responses: {

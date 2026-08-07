@@ -10,7 +10,7 @@ router.get(
     "/",
     describeRoute({
         summary: "Get Announcements",
-        description: "Retrieve a list of all announcements.",
+        description: "Retrieves a list of general announcements broadcasted by admins. Useful for rendering a 'News' or 'Announcements' banner in the app.",
         tags: ["Announcements"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -25,7 +25,7 @@ router.post(
     "/",
     describeRoute({
         summary: "Create Announcement",
-        description: "Publish a new announcement (Admin only).",
+        description: "Admin ONLY. Publishes a new announcement that will be visible to all citizens.",
         tags: ["Announcements"],
         security: [{ bearerAuth: [] }],
         responses: {

@@ -10,7 +10,7 @@ eventRouter.get(
     "/",
     describeRoute({
         summary: "Get All Events",
-        description: "Retrieve a list of all events. Can optionally filter by timeframe (upcoming or ongoing).",
+        description: "Retrieves a list of community events. The frontend should heavily use the query parameter `?timeframe=upcoming` or `?timeframe=ongoing` to fetch relevant events for the user's home feed. Events returned are strictly those with a 'PUBLISHED' status.",
         tags: ["Events"],
         responses: {
             200: {
@@ -26,7 +26,7 @@ eventRouter.get(
     "/:eventId",
     describeRoute({
         summary: "Get Event by ID",
-        description: "Retrieve an event by its ID.",
+        description: "Retrieves the full details of a specific event. Use this to populate the Event Detail page. Contains location coordinates, radius, and schedule required for check-in validation.",
         tags: ["Events"],
         responses: {
             200: {
@@ -45,7 +45,7 @@ eventRouter.post(
     "/",
     describeRoute({
         summary: "Create Event",
-        description: "Admin: Create a new event.",
+        description: "Admin ONLY. Creates a new community event. Note that new events are created in 'DRAFT' status by default. An admin must explicitly publish it via an update request for it to be visible to citizens.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -67,7 +67,7 @@ eventRouter.put(
     "/:eventId",
     describeRoute({
         summary: "Full Update Event",
-        description: "Admin: Update an event by its ID (full update).",
+        description: "Admin ONLY. Replaces the entire event record. Useful when editing all fields of an event in the CMS.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -93,7 +93,7 @@ eventRouter.patch(
     "/:eventId",
     describeRoute({
         summary: "Partial Update Event",
-        description: "Admin: Update an event by its ID (partial update).",
+        description: "Admin ONLY. Updates specific fields of an event. Commonly used to publish an event by sending `{\"status\": \"PUBLISHED\"}`.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -119,7 +119,7 @@ eventRouter.delete(
     "/:eventId",
     describeRoute({
         summary: "Remove Event",
-        description: "Admin: Remove an event by its ID.",
+        description: "Admin ONLY. Permanently deletes an event from the database. Use with caution as this may impact historical attendance records.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
