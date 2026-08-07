@@ -45,7 +45,7 @@ rewardRouter.post(
     "/",
     describeRoute({
         summary: "Create Reward",
-        description: "Admin: Create a new reward.",
+        description: "Admin/Provider: Create a new reward.",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -58,7 +58,7 @@ rewardRouter.post(
         },
     }),
     requireAuth,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'CITIZEN']),
     validator("json", createRewardSchema),
     rewardController.createReward,
 );
@@ -67,7 +67,7 @@ rewardRouter.put(
     "/:rewardId",
     describeRoute({
         summary: "Full Update Reward",
-        description: "Admin: Update a reward by its ID (full update).",
+        description: "Admin/Provider: Update a reward by its ID (full update).",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -83,7 +83,7 @@ rewardRouter.put(
         },
     }),
     requireAuth,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'CITIZEN']),
     validator("param", paramSchema),
     validator("json", fullUpdateRewardSchema),
     rewardController.fullUpdateReward,
@@ -93,7 +93,7 @@ rewardRouter.patch(
     "/:rewardId",
     describeRoute({
         summary: "Partial Update Reward",
-        description: "Admin: Update a reward by its ID (partial update).",
+        description: "Admin/Provider: Update a reward by its ID (partial update).",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -109,7 +109,7 @@ rewardRouter.patch(
         },
     }),
     requireAuth,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'CITIZEN']),
     validator("param", paramSchema),
     validator("json", partialUpdateRewardSchema),
     rewardController.partialUpdateReward,
@@ -119,7 +119,7 @@ rewardRouter.delete(
     "/:rewardId",
     describeRoute({
         summary: "Remove Reward",
-        description: "Admin: Remove a reward by its ID.",
+        description: "Admin/Provider: Remove a reward by its ID.",
         tags: ["Rewards"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -132,7 +132,7 @@ rewardRouter.delete(
         },
     }),
     requireAuth,
-    requireRole(['ADMIN']),
+    requireRole(['ADMIN', 'CITIZEN']),
     validator("param", paramSchema),
     rewardController.removeReward,
 );

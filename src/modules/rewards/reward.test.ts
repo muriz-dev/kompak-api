@@ -111,4 +111,126 @@ describe("Reward Module", () => {
             expect(data.data[0].name).toBe("Leaderboard Reward");
         });
     });
+
+    describe("Provider Reward Authorization", () => {
+        let verifiedProviderToken: string;
+        let verifiedProviderId: string;
+        let pendingProviderToken: string;
+        let pendingProviderId: string;
+        let providerRewardId: string;
+
+        beforeAll(async () => {
+            const { drizzle } = await import("drizzle-orm/d1");
+            const { users, providers } = await import("../../db/schema");
+            const db = drizzle(env.DB);
+
+            // User 1: Verified Provider
+            const user1Id = uuidv7();
+            await db.insert(users).values({
+                id: user1Id, name: "Verified User", email: "verified@test.com", password: "pwd",
+                faceEmbeddingId: "v", phoneNumber: "011", role: "CITIZEN", status: "ACTIVE",
+                birthDate: new Date().toISOString()
+            });
+            verifiedProviderToken = await generateTestToken(user1Id, "CITIZEN");
+            verifiedProviderId = uuidv7();
+            await db.insert(providers).values({
+                id: verifiedProviderId, ownerId: user1Id, name: "Verified Provider",
+                address: "Address", status: "VERIFIED", latitude: 0, longitude: 0
+            });
+
+            // User 2: Pending Provider
+            const user2Id = uuidv7();
+            await db.insert(users).values({
+                id: user2Id, name: "Pending User", email: "pending@test.com", password: "pwd",
+                faceEmbeddingId: "p", phoneNumber: "012", role: "CITIZEN", status: "ACTIVE",
+                birthDate: new Date().toISOString()
+            });
+            pendingProviderToken = await generateTestToken(user2Id, "CITIZEN");
+            pendingProviderId = uuidv7();
+            await db.insert(providers).values({
+                id: pendingProviderId, ownerId: user2Id, name: "Pending Provider",
+                address: "Address", status: "PENDING", latitude: 0, longitude: 0
+            });
+        });
+
+        it("should allow a VERIFIED provider to create a reward", async () => {
+            const res = await app.request("/rewards", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${verifiedProviderToken}`
+                },
+                body: JSON.stringify({
+                    name: "Provider Reward",
+                    pointsRequired: 50,
+                    stock: 10,
+                    type: "PRODUCT",
+                    source: "POINT_SHOP",
+                    providerId: verifiedProviderId
+                })
+            }, env);
+
+            expect(res.status).toBe(201);
+            const data = await res.json() as any;
+            providerRewardId = data.data.id;
+        });
+
+        it("should NOT allow a PENDING provider to create a reward", async () => {
+            const res = await app.request("/rewards", {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${pendingProviderToken}`
+                },
+                body: JSON.stringify({
+                    name: "Pending Reward",
+                    pointsRequired: 50,
+                    stock: 10,
+                    type: "PRODUCT",
+                    source: "POINT_SHOP",
+                    providerId: pendingProviderId
+                })
+            }, env);
+
+            expect(res.status).toBe(403);
+        });
+
+        it("should NOT allow a provider to update another provider's reward", async () => {
+            // verifiedProvider trying to update Admin's reward (from previous test suite)
+            const res = await app.request(`/rewards/${rewardId}`, {
+                method: "PUT",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${verifiedProviderToken}`
+                },
+                body: JSON.stringify({
+                    name: "Hacked Reward",
+                    pointsRequired: 1,
+                    stock: 10,
+                    type: "PRODUCT",
+                    source: "POINT_SHOP",
+                    providerId: providerId
+                })
+            }, env);
+
+            expect(res.status).toBe(403);
+        });
+
+        it("should allow a VERIFIED provider to update their own reward", async () => {
+            const res = await app.request(`/rewards/${providerRewardId}`, {
+                method: "PATCH",
+                headers: { 
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${verifiedProviderToken}`
+                },
+                body: JSON.stringify({
+                    stock: 20
+                })
+            }, env);
+
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.data.stock).toBe(20);
+        });
+    });
 });
