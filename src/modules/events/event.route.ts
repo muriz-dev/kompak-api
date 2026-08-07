@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./event.controller";
-import { paramSchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
+import { paramSchema, querySchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const eventRouter = new Hono();
@@ -10,7 +10,7 @@ eventRouter.get(
     "/",
     describeRoute({
         summary: "Get All Events",
-        description: "Retrieve a list of all events in the SGA profile system.",
+        description: "Retrieve a list of all events. Can optionally filter by timeframe (upcoming or ongoing).",
         tags: ["Events"],
         responses: {
             200: {
@@ -18,6 +18,7 @@ eventRouter.get(
             },
         },
     }),
+    validator("query", querySchema),
     controller.getAllEvents,
 );
 

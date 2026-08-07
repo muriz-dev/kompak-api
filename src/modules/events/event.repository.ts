@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { eq } from "drizzle-orm";
+import { eq, and, gt, gte, lte } from "drizzle-orm";
 import { getDb } from "../../db/connection";
 import { events } from "../../db/schema";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "../events/event.schema";
@@ -10,12 +10,30 @@ import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema
  * @param {Context} c
  * @returns {Promise<Event[]>}
  */
-export const getAll = async (c: Context) => {
+export const getAll = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
     const db = getDb(c.env.DB);
+    
+    let whereClause = undefined;
+    const now = new Date();
 
-    const events = await db.query.events.findMany();
+    if (timeframe === "upcoming") {
+        whereClause = and(
+            eq(events.status, "PUBLISHED"),
+            gt(events.attendanceStartTime, now)
+        );
+    } else if (timeframe === "ongoing") {
+        whereClause = and(
+            eq(events.status, "PUBLISHED"),
+            lte(events.attendanceStartTime, now),
+            gte(events.attendanceEndTime, now)
+        );
+    }
 
-    return events;
+    const eventsData = await db.query.events.findMany({
+        where: whereClause,
+    });
+
+    return eventsData;
 }
 
 /**

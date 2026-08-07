@@ -4,6 +4,10 @@ export const paramSchema = z.object({
     eventId: z.uuid("Invalid event ID"),
 });
 
+export const querySchema = z.object({
+    timeframe: z.enum(["upcoming", "ongoing"]).optional(),
+});
+
 export const createEventSchema = z.object({
     title: z.string().min(1, "Title is required"),
     description: z.string(),
@@ -30,3 +34,4 @@ export type ParamSchema = z.infer<typeof paramSchema>;
 export type CreateEventSchema = z.infer<typeof createEventSchema>;
 export type FullUpdateEventSchema = z.infer<typeof fullUpdateEventSchema>;
 export type PartialUpdateEventSchema = z.infer<typeof partialUpdateEventSchema>;
+export type QuerySchema = z.infer<typeof querySchema>;

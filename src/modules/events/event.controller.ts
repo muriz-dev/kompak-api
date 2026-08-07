@@ -1,21 +1,25 @@
 import type { Context, Env, ValidationTargets } from "hono";
 import eventService from "./event.service";
-import type { ParamSchema, CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
+import type { ParamSchema, QuerySchema, CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
 import { ApiResponse } from "../../utils/api-response";
 
 type EventContext = Context<Env, any, {
-    in: Pick<ValidationTargets, 'param' | 'json'> & {
+    in: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateEventSchema | FullUpdateEventSchema | PartialUpdateEventSchema,
+        query: QuerySchema,
     };
-    out: Pick<ValidationTargets, 'param' | 'json'> & {
+    out: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateEventSchema | FullUpdateEventSchema | PartialUpdateEventSchema,
+        query: QuerySchema,
     };
 }>;
 
 export const getAllEvents = async (ctx: EventContext) => {
-    const events = await eventService.getAllEvents(ctx);
+    const { timeframe } = ctx.req.valid("query") || {};
+
+    const events = await eventService.getAllEvents(ctx, timeframe);
 
     return ApiResponse.ok(ctx, "Events retrieved successfully", events);
 }

@@ -3,8 +3,8 @@ import eventRepository from "./event.repository";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
 import { ApiError } from "../../utils/api-error";
 
-export const getAllEvents = async (c: Context) => {
-    return eventRepository.getAll(c);
+export const getAllEvents = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
+    return eventRepository.getAll(c, timeframe);
 }
 
 export const getEventById = async (c: Context, eventId: string) => {
