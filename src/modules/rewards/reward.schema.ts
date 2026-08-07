@@ -4,6 +4,10 @@ export const paramSchema = z.object({
     rewardId: z.uuid("Invalid reward ID"),
 });
 
+export const querySchema = z.object({
+    source: z.enum(["POINT_SHOP", "LEADERBOARD"]).optional(),
+});
+
 export const createRewardSchema = z.object({
     name: z.string().min(1, "Reward name is required"),
     pointsRequired: z.number().min(0, "Points required cannot be negative"),
@@ -21,3 +25,4 @@ export type ParamSchema = z.infer<typeof paramSchema>;
 export type CreateRewardSchema = z.infer<typeof createRewardSchema>;
 export type FullUpdateRewardSchema = z.infer<typeof fullUpdateRewardSchema>;
 export type PartialUpdateRewardSchema = z.infer<typeof partialUpdateRewardSchema>;
+export type QuerySchema = z.infer<typeof querySchema>;

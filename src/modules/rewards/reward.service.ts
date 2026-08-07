@@ -3,8 +3,8 @@ import rewardRepository from "./reward.repository";
 import type { CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSchema } from "./reward.schema";
 import { ApiError } from "../../utils/api-error";
 
-export const getAllRewards = async (c: Context) => {
-    return rewardRepository.getAll(c);
+export const getAllRewards = async (c: Context, source?: "POINT_SHOP" | "LEADERBOARD") => {
+    return rewardRepository.getAll(c, source);
 }
 
 export const getRewardById = async (c: Context, rewardId: string) => {

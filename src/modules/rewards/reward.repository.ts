@@ -10,12 +10,19 @@ import type { CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSch
  * @param {Context} c
  * @returns {Promise<Reward[]>}
  */
-export const getAll = async (c: Context) => {
+export const getAll = async (c: Context, source?: "POINT_SHOP" | "LEADERBOARD") => {
     const db = getDb(c.env.DB);
+    
+    let whereClause = undefined;
+    if (source) {
+        whereClause = eq(rewards.source, source);
+    }
 
-    const rewards = await db.query.rewards.findMany();
+    const rewardsData = await db.query.rewards.findMany({
+        where: whereClause,
+    });
 
-    return rewards;
+    return rewardsData;
 }
 
 /**

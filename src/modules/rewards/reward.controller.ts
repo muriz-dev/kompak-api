@@ -1,21 +1,25 @@
 import type { Context, Env, ValidationTargets } from "hono";
 import rewardService from "./reward.service";
-import type { ParamSchema, CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSchema } from "./reward.schema";
+import type { ParamSchema, QuerySchema, CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSchema } from "./reward.schema";
 import { ApiResponse } from "../../utils/api-response";
 
 type RewardContext = Context<Env, any, {
-    in: Pick<ValidationTargets, 'param' | 'json'> & {
+    in: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateRewardSchema | FullUpdateRewardSchema | PartialUpdateRewardSchema,
+        query: QuerySchema,
     };
-    out: Pick<ValidationTargets, 'param' | 'json'> & {
+    out: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateRewardSchema | FullUpdateRewardSchema | PartialUpdateRewardSchema,
+        query: QuerySchema,
     };
 }>;
 
 export const getAllRewards = async (c: RewardContext) => {
-    const rewards = await rewardService.getAllRewards(c);
+    const { source } = c.req.valid("query") || {};
+
+    const rewards = await rewardService.getAllRewards(c, source);
 
     return ApiResponse.ok(c, "Rewards retrieved successfully", rewards);
 }

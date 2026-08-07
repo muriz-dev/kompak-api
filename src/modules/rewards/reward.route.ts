@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as rewardController from "./reward.controller";
-import { paramSchema, createRewardSchema, fullUpdateRewardSchema, partialUpdateRewardSchema } from "./reward.schema";
+import { paramSchema, querySchema, createRewardSchema, fullUpdateRewardSchema, partialUpdateRewardSchema } from "./reward.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const rewardRouter = new Hono();
@@ -10,7 +10,7 @@ rewardRouter.get(
     "/",
     describeRoute({
         summary: "Get All Rewards",
-        description: "Retrieve a list of all rewards in the SGA profile system.",
+        description: "Retrieve a list of all rewards. Can optionally filter by source (POINT_SHOP or LEADERBOARD).",
         tags: ["Rewards"],
         responses: {
             200: {
@@ -18,6 +18,7 @@ rewardRouter.get(
             },
         },
     }),
+    validator("query", querySchema),
     rewardController.getAllRewards,
 );
 
