@@ -53,15 +53,16 @@ export const registerUserSchema = z.object({
     password: z.string()
         .min(6, "Password must be at least 6 characters")
         .max(72, "Password must be at most 72 characters"),
-    faceImage: z.instanceof(File, { message: "Face image is required" })
-        .refine(
-            (file) => file.size <= MAX_FACE_IMAGE_BYTES,
+    faceImage: z.file("Face image is required")
+        .max(
+            MAX_FACE_IMAGE_BYTES,
             "Face image must be no larger than 10 MB"
         )
-        .refine(
-            (file) => FACE_IMAGE_TYPES.includes(file.type),
+        .mime(
+            FACE_IMAGE_TYPES,
             "Face image must be a JPEG, PNG, or WebP file"
-        ),
+        )
+        .transform((file) => file as File),
 });
 
 export const updateStatusSchema = z.object({
