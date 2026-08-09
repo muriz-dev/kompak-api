@@ -32,6 +32,7 @@ describe("Reward Redemptions Module", () => {
         await db.insert(users).values({
             id: adminId, name: "Admin", email: "admin@test.com", password: "pwd",
             faceEmbeddingId: "face", phoneNumber: "081", role: "ADMIN",
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         
@@ -40,6 +41,7 @@ describe("Reward Redemptions Module", () => {
             id: userId, name: "User", email: "user@test.com", password: "pwd",
             faceEmbeddingId: "face2", phoneNumber: "082", role: "CITIZEN",
             balance: 500,
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         
@@ -47,6 +49,7 @@ describe("Reward Redemptions Module", () => {
         await db.insert(users).values({
             id: providerUserId, name: "Provider", email: "prov@test.com", password: "pwd",
             faceEmbeddingId: "face3", phoneNumber: "083", role: "CITIZEN",
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         

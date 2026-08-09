@@ -3,6 +3,7 @@ import userService from "./user.service";
 import type { ParamSchema, RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
 import { ApiResponse } from "../../utils/api-response";
 import type { Env } from "../../types";
+import { toSafeUser } from "./safe-user";
 
 type RegisterContext = Context<Env, string, {
     in: Pick<ValidationTargets, 'form'> & {
@@ -23,11 +24,6 @@ type UserContext = Context<Env, any, {
         json: RegisterUserSchema & UpdateStatusSchema
     };
 }>;
-
-const toSafeUser = <T extends { password: string; faceEmbeddingId: string }>(user: T) => {
-    const { password, faceEmbeddingId, ...safeUser } = user;
-    return safeUser;
-};
 
 export const register = async (ctx: RegisterContext) => {
     const data = ctx.req.valid("form");

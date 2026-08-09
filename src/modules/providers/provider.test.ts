@@ -23,7 +23,8 @@ describe("Provider Module", () => {
             faceEmbeddingId: "dummy-face-id", // added mandatory field
             phoneNumber: "08123456789", // added mandatory field
             birthDate: new Date().toISOString(),
-            role: "CITIZEN"
+            role: "CITIZEN",
+            status: "ACTIVE"
         });
 
         userToken = await generateTestToken(userId, "CITIZEN");
