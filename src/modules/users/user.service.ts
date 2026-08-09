@@ -1,20 +1,12 @@
 import type { Context } from "hono";
+import type { Env } from "../../types";
 import userRepository from "./user.repository";
 import type { RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
 import { ApiError } from "../../utils/api-error";
-import { hashPassword } from "../../utils/password";
+import { userRegistration } from "./user-registration";
 
-export const register = async (c: Context, data: RegisterUserSchema) => {
-    // Check if email already exists
-    const existingUser = await userRepository.getByEmail(c, data.email);
-    if (existingUser) {
-        throw ApiError.badRequest("Email already registered");
-    }
-    
-    // Hash password before saving
-    data.password = await hashPassword(data.password);
-    
-    return userRepository.create(c, data);
+export const register = async (c: Context<Env, string, any>, data: RegisterUserSchema) => {
+    return userRegistration.register(c, data);
 };
 
 export const getAllUsers = async (c: Context, status?: string) => {

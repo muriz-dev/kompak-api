@@ -6,6 +6,13 @@ export default defineConfig({
     cloudflareTest({
       wrangler: { configPath: "./wrangler.jsonc" },
       remoteBindings: false,
+      miniflare: {
+        bindings: {
+          JWT_SECRET: "test-jwt-secret",
+          FACE_API_URL: "https://face.test",
+          FACE_API_KEY: "test-face-api-key",
+        },
+      },
     }),
   ],
   test: {

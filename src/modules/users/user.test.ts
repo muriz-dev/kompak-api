@@ -1,11 +1,12 @@
 import { env } from "cloudflare:workers";
-import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations, generateTestToken } from "../../test-setup";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { applyMigrations, createRegistrationForm, generateTestToken } from "../../test-setup";
 import app from "../../index";
 import { uuidv7 } from "uuidv7";
 
 describe("User Module", () => {
     let adminToken: string;
+    let faceFetch: ReturnType<typeof vi.fn>;
 
     beforeAll(async () => {
         await applyMigrations();
@@ -22,49 +23,97 @@ describe("User Module", () => {
         adminToken = await generateTestToken(adminId, "ADMIN");
     });
 
-    it("should register a new user successfully", async () => {
-        const payload = {
-            name: "Test User",
-            email: "test@example.com",
-            password: "password123",
-            phoneNumber: "08123456789",
-            birthDate: "1990-01-01",
-            faceEmbeddingId: "face-123"
-        };
+    beforeEach(() => {
+        faceFetch = vi.fn().mockResolvedValue(new Response(
+            JSON.stringify({ face_id: "face-123" }),
+            { status: 201, headers: { "Content-Type": "application/json" } }
+        ));
+        vi.stubGlobal("fetch", faceFetch);
+    });
 
+    afterAll(() => vi.unstubAllGlobals());
+
+    it("should register a new user successfully", async () => {
         const res = await app.request("/users/register", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: createRegistrationForm()
         }, env);
 
         expect(res.status).toBe(201);
         const data = await res.json() as any;
         expect(data.message).toBe("Registration successful. Please wait for admin approval.");
         expect(data.data.email).toBe("test@example.com");
+        expect(data.data.phoneNumber).toBe("+628123456789");
         expect(data.data.status).toBe("PENDING");
         expect(data.data.password).toBeUndefined();
+        expect(data.data.faceEmbeddingId).toBeUndefined();
+        expect(faceFetch).toHaveBeenCalledTimes(1);
+
+        const [url, init] = faceFetch.mock.calls[0];
+        expect(url).toBe("https://face.test/api/v1/faces");
+        expect(init.headers).toEqual({ "X-API-Key": "test-face-api-key" });
+        expect(init.body).toBeInstanceOf(FormData);
+        expect((init.body as FormData).get("image")).toBeInstanceOf(File);
     });
 
     it("should fail to register with duplicate email", async () => {
-        const payload = {
-            name: "Test User 2",
-            email: "test@example.com",
-            password: "password123",
-            phoneNumber: "08123456789",
-            birthDate: "1990-01-01",
-            faceEmbeddingId: "face-456"
-        };
+        const res = await app.request("/users/register", {
+            method: "POST",
+            body: createRegistrationForm({ name: "Test User 2" })
+        }, env);
+
+        expect(res.status).toBe(409);
+        const data = await res.json() as any;
+        expect(data.message).toBe("Email already registered");
+        expect(faceFetch).not.toHaveBeenCalled();
+    });
+
+    it("should return field errors before enrolling a face", async () => {
+        const res = await app.request("/users/register", {
+            method: "POST",
+            body: createRegistrationForm({
+                email: "invalid-email",
+                phoneNumber: null,
+            })
+        }, env);
+
+        expect(res.status).toBe(422);
+        const data = await res.json() as any;
+        expect(data.errors.email).toBeDefined();
+        expect(data.errors.phoneNumber).toBeDefined();
+        expect(faceFetch).not.toHaveBeenCalled();
+    });
+
+    it("should map face enrollment errors without creating a user", async () => {
+        faceFetch.mockResolvedValueOnce(new Response(
+            JSON.stringify({ code: "face_too_blurry", message: "Face image is too blurry" }),
+            { status: 422, headers: { "Content-Type": "application/json" } }
+        ));
 
         const res = await app.request("/users/register", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: createRegistrationForm({ email: "blurry@example.com" })
         }, env);
 
-        expect(res.status).toBe(400);
+        expect(res.status).toBe(422);
         const data = await res.json() as any;
-        expect(data.message).toBe("Email already registered");
+        expect(data.errors.faceImage).toBe("Face image is too blurry");
+
+        const listRes = await app.request("/users", {
+            headers: { "Authorization": `Bearer ${adminToken}` }
+        }, env);
+        const listData = await listRes.json() as any;
+        expect(listData.data.some((user: any) => user.email === "blurry@example.com")).toBe(false);
+    });
+
+    it("should document registration as multipart form data", async () => {
+        const res = await app.request("/openapi", {}, env);
+
+        expect(res.status).toBe(200);
+        const spec = await res.json() as any;
+        expect(
+            spec.paths["/users/register"].post.requestBody.content["multipart/form-data"]
+        ).toBeDefined();
     });
 
     it("should retrieve a user by ID", async () => {
@@ -81,5 +130,6 @@ describe("User Module", () => {
         expect(res.status).toBe(200);
         const data = await res.json() as any;
         expect(data.data.email).toBe("test@example.com");
+        expect(data.data.faceEmbeddingId).toBeUndefined();
     });
 });

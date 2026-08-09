@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
-import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations } from "../../test-setup";
+import { describe, it, expect, beforeAll, beforeEach, afterAll, vi } from "vitest";
+import { applyMigrations, createRegistrationForm } from "../../test-setup";
 import app from "../../index";
 
 describe("Auth Module", () => {
@@ -10,20 +10,23 @@ describe("Auth Module", () => {
 
     let authToken = "";
 
+    beforeEach(() => {
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
+            JSON.stringify({ face_id: "face-login-123" }),
+            { status: 201, headers: { "Content-Type": "application/json" } }
+        )));
+    });
+
+    afterAll(() => vi.unstubAllGlobals());
+
     it("should login successfully with valid credentials", async () => {
         // First register a user
-        const payload = {
-            name: "Login User",
-            email: "login@example.com",
-            password: "password123",
-            phoneNumber: "08123456789",
-            birthDate: "1990-01-01",
-            faceEmbeddingId: "face-login-123"
-        };
         await app.request("/users/register", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: createRegistrationForm({
+                name: "Login User",
+                email: "login@example.com",
+            })
         }, env);
 
         // Then login

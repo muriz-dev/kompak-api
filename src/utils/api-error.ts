@@ -42,8 +42,12 @@ export class ApiError extends Error {
         return new ApiError(STATUS_CODES.CONFLICT, message);
     }
 
+    static payloadTooLarge(message = "Payload Too Large") {
+        return new ApiError(STATUS_CODES.PAYLOAD_TOO_LARGE, message);
+    }
+
     static validation(message = "Validation failed", errors?: unknown) {
-        return new ApiError(STATUS_CODES.BAD_REQUEST, message, errors);
+        return new ApiError(STATUS_CODES.UNPROCESSABLE_ENTITY, message, errors);
     }
 
     static notImplemented(message = "Not Implemented") {
@@ -56,6 +60,10 @@ export class ApiError extends Error {
 
     static serviceUnavailable(message = "Service Unavailable") {
         return new ApiError(STATUS_CODES.SERVICE_UNAVAILABLE, message);
+    }
+
+    static gatewayTimeout(message = "Gateway Timeout") {
+        return new ApiError(STATUS_CODES.GATEWAY_TIMEOUT, message);
     }
 
     static tooManyRequests(message = "Too Many Requests") {

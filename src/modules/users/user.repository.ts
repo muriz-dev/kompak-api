@@ -2,10 +2,10 @@ import { eq, desc } from "drizzle-orm";
 import type { Context } from "hono";
 import { getDb } from "../../db/connection";
 import { users } from "../../db/schema";
-import type { RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
+import type { RegisterUserData, UpdateStatusSchema } from "./user.schema";
 import { uuidv7 } from "uuidv7";
 
-export const create = async (c: Context, data: RegisterUserSchema) => {
+export const create = async (c: Context, data: RegisterUserData) => {
     const db = getDb(c.env.DB);
     const id = uuidv7();
     

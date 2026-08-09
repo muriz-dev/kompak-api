@@ -37,3 +37,40 @@ export const generateTestToken = async (userId: string, role: string = "USER") =
         env.JWT_SECRET as string
     );
 };
+
+type RegistrationFormOverrides = Partial<{
+    name: string | null;
+    phoneNumber: string | null;
+    email: string | null;
+    birthDate: string | null;
+    password: string | null;
+    faceImage: File | null;
+}>;
+
+export const createRegistrationForm = (
+    overrides: RegistrationFormOverrides = {}
+) => {
+    const values = {
+        name: "Test User",
+        phoneNumber: "08123456789",
+        email: "test@example.com",
+        birthDate: "1990-01-01",
+        password: "password123",
+        ...overrides,
+    };
+    const form = new FormData();
+
+    for (const field of ["name", "phoneNumber", "email", "birthDate", "password"] as const) {
+        const value = values[field];
+        if (value !== null) form.append(field, value);
+    }
+
+    const faceImage = overrides.faceImage === undefined
+        ? new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], "face.jpg", {
+            type: "image/jpeg",
+        })
+        : overrides.faceImage;
+    if (faceImage !== null) form.append("faceImage", faceImage);
+
+    return form;
+};
