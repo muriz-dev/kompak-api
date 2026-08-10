@@ -33,11 +33,18 @@ const eventFieldsSchema = z.object({
     bannerUrl: z.url("Invalid banner URL").optional(),
 });
 
-const validateSchedule = (
-    data: { attendanceStartTime: Date; attendanceEndTime: Date },
+const validateAttendanceWindow = (
+    data: {
+        attendanceStartTime?: Date;
+        attendanceEndTime?: Date;
+    },
     ctx: z.RefinementCtx,
 ) => {
-    if (data.attendanceEndTime <= data.attendanceStartTime) {
+    if (
+        data.attendanceStartTime !== undefined &&
+        data.attendanceEndTime !== undefined &&
+        data.attendanceEndTime <= data.attendanceStartTime
+    ) {
         ctx.addIssue({
             code: "custom",
             path: ["attendanceEndTime"],
@@ -50,15 +57,15 @@ export const createEventSchema = eventFieldsSchema
     .extend({
         status: z.enum(["DRAFT", "PUBLISHED"]).optional(),
     })
-    .superRefine(validateSchedule);
+    .superRefine(validateAttendanceWindow);
 
-export const fullUpdateEventSchema = eventFieldsSchema.superRefine(validateSchedule);
+export const fullUpdateEventSchema = eventFieldsSchema.superRefine(validateAttendanceWindow);
 
 export const partialUpdateEventSchema = exactOptional(
     eventFieldsSchema.partial().extend({
         status: eventStatusSchema.optional(),
     })
-);
+).superRefine(validateAttendanceWindow);
 
 export type ParamSchema = z.infer<typeof paramSchema>;
 export type CreateEventSchema = z.infer<typeof createEventSchema>;

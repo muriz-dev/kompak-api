@@ -44,6 +44,13 @@ export const fullUpdateEvent = async (c: Context, eventId: string, eventData: Fu
 export const partialUpdateEvent = async (c: Context, eventId: string, eventData: PartialUpdateEventSchema) => {
     const event = await getManagedEventById(c, eventId);
 
+    const attendanceStartTime = eventData.attendanceStartTime ?? event.attendanceStartTime;
+    const attendanceEndTime = eventData.attendanceEndTime ?? event.attendanceEndTime;
+
+    if (attendanceEndTime <= attendanceStartTime) {
+        throw ApiError.validation("Attendance end time must be after start time");
+    }
+
     if (eventData.status && eventData.status !== event.status) {
         const allowedTransitions: Record<EventStatus, readonly EventStatus[]> = {
             DRAFT: ["PUBLISHED"],

@@ -9,6 +9,23 @@ describe("Event Module", () => {
     let adminId: string;
     let citizenToken: string;
     let draftEventId: string;
+
+    const validPayload = (overrides: Record<string, unknown> = {}) => {
+        const attendanceStartTime = new Date(Date.now() - 7200000);
+
+        return {
+            title: "Test Event",
+            description: "A test event with radius",
+            eventDate: attendanceStartTime.toISOString(),
+            attendanceStartTime: attendanceStartTime.toISOString(),
+            attendanceEndTime: new Date(attendanceStartTime.getTime() + 3600000).toISOString(),
+            rewardPoints: 100,
+            latitude: -6.200000,
+            longitude: 106.816666,
+            radiusMeters: 50,
+            ...overrides,
+        };
+    };
     
     beforeAll(async () => {
         await applyMigrations();
@@ -34,17 +51,9 @@ describe("Event Module", () => {
     });
 
     it("should create an event successfully", async () => {
-        const payload = {
-            title: "Test Event",
-            description: "A test event with radius",
-            eventDate: new Date().toISOString(),
-            attendanceStartTime: new Date().toISOString(),
-            attendanceEndTime: new Date(Date.now() + 3600000).toISOString(),
-            rewardPoints: 100,
-            latitude: -6.200000,
-            longitude: 106.816666,
-            radiusMeters: 50
-        };
+        const payload = validPayload({
+            bannerUrl: "https://assets.kompak.test/events/banner.jpg",
+        });
 
         const res = await app.request("/events", {
             method: "POST",
@@ -64,8 +73,98 @@ describe("Event Module", () => {
         expect(data.data.title).toBe("Test Event");
         expect(data.data.rewardPoints).toBe(100);
         expect(data.data.radiusMeters).toBe(50);
+        expect(data.data.bannerUrl).toBe("https://assets.kompak.test/events/banner.jpg");
         expect(data.data.status).toBe("DRAFT");
         draftEventId = data.data.id;
+    });
+
+    it.each([
+        ["latitude below -90", { latitude: -90.1 }],
+        ["latitude above 90", { latitude: 90.1 }],
+        ["longitude below -180", { longitude: -180.1 }],
+        ["longitude above 180", { longitude: 180.1 }],
+    ])("should reject %s", async (_name, overrides) => {
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload(overrides)),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should reject an attendance window that ends before it starts", async () => {
+        const attendanceStartTime = new Date(Date.now() + 7200000);
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({
+                attendanceStartTime: attendanceStartTime.toISOString(),
+                attendanceEndTime: new Date(attendanceStartTime.getTime() - 60000).toISOString(),
+            })),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should reject a terminal status during creation", async () => {
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({ status: "CANCELLED" })),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should create a draft by default and allow it to be published", async () => {
+        const createResponse = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({ title: "Draft to publish" })),
+        }, env);
+        const created = await createResponse.json() as any;
+
+        expect(createResponse.status).toBe(201);
+        expect(created.data.status).toBe("DRAFT");
+
+        const publishResponse = await app.request(`/events/${created.data.id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({ status: "PUBLISHED" }),
+        }, env);
+        const published = await publishResponse.json() as any;
+
+        expect(publishResponse.status).toBe(200);
+        expect(published.data.status).toBe("PUBLISHED");
+
+        const invalidWindowResponse = await app.request(`/events/${created.data.id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({
+                attendanceStartTime: new Date(Date.now() + 86400000).toISOString(),
+            }),
+        }, env);
+
+        expect(invalidWindowResponse.status).toBe(400);
     });
 
     it("should hide draft events from the public event list", async () => {
