@@ -1,8 +1,10 @@
 import { env } from "cloudflare:workers";
-import { describe, it, expect, beforeAll } from "vitest";
-import { applyMigrations, generateTestToken } from "../../test-setup";
+import { afterEach, describe, it, expect, beforeAll, vi } from "vitest";
+import { applyMigrations, createAttendanceForm, generateTestToken } from "../../test-setup";
 import app from "../../index";
 import { uuidv7 } from "uuidv7";
+import { ApiError } from "../../utils/api-error";
+import { httpFaceEnrollmentClient } from "../users/face-enrollment.client";
 
 describe("Attendance Module", () => {
     let userId: string;
@@ -61,20 +63,18 @@ describe("Attendance Module", () => {
 
     });
 
+    afterEach(() => vi.restoreAllMocks());
+
     it("should fail attendance if outside radius", async () => {
-        const attPayload = {
-            eventId: eventId,
-            latitude: -6.100000, // Far away
-            longitude: 106.816666,
-            activityDescription: "Attending!"
-        };
+        const form = createAttendanceForm({
+            eventId,
+            latitude: "-6.1",
+            activityDescription: "Attending!",
+        });
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${userToken}`
-            },
-            body: JSON.stringify(attPayload)
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: form,
         }, env);
 
         expect(res.status).toBe(400);
@@ -82,22 +82,88 @@ describe("Attendance Module", () => {
         expect(data.message).toBe("User is not within the event radius");
     });
 
-
-
-    it("should successfully record attendance and give points", async () => {
-        const attPayload = {
-            eventId: eventId,
-            latitude: -6.200000, // Exact same location
-            longitude: 106.816666,
-            activityPhotoUrl: "https://example.com/photo.jpg"
-        };
+    it("should require a transient face image", async () => {
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${userToken}`
-            },
-            body: JSON.stringify(attPayload)
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: createAttendanceForm({ eventId, faceImage: null }),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should only allow citizens to record attendance", async () => {
+        const res = await app.request("/attendances", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${adminToken}` },
+            body: createAttendanceForm({ eventId }),
+        }, env);
+
+        expect(res.status).toBe(403);
+    });
+
+
+
+    it("should reject attendance when the face belongs to another user", async () => {
+        vi.spyOn(httpFaceEnrollmentClient, "search").mockResolvedValue({
+                matched: true,
+                faceId: "face-someone-else",
+                similarity: 0.88,
+                threshold: 0.45,
+            });
+
+        const res = await app.request("/attendances", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: createAttendanceForm({ eventId }),
+        }, env);
+
+        expect(res.status).toBe(422);
+        const data = await res.json() as any;
+        expect(data.message).toBe("Face could not be verified");
+        expect(data.errors.faceCode).toBe("face_mismatch");
+
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { users } = await import("../../db/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = drizzle(env.DB);
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        expect(user?.balance).toBe(0);
+        expect(user?.leaderboardPoints).toBe(0);
+    });
+
+    it("should fail safely when face verification is unavailable", async () => {
+        vi.spyOn(httpFaceEnrollmentClient, "search").mockRejectedValue(
+            ApiError.serviceUnavailable("Face verification service is unavailable")
+        );
+
+        const res = await app.request("/attendances", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: createAttendanceForm({ eventId }),
+        }, env);
+
+        expect(res.status).toBe(503);
+        const data = await res.json() as any;
+        expect(data.message).toBe("Face verification service is unavailable");
+    });
+
+    it("should successfully record attendance and give points after a face match", async () => {
+        vi.spyOn(httpFaceEnrollmentClient, "search").mockResolvedValue({
+                matched: true,
+                faceId: "face-att",
+                similarity: 0.91,
+                threshold: 0.45,
+            });
+
+        const form = createAttendanceForm({
+            eventId,
+            activityPhotoUrl: "https://example.com/photo.jpg",
+        });
+        const res = await app.request("/attendances", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: form,
         }, env);
 
         expect(res.status).toBe(201);
@@ -108,18 +174,10 @@ describe("Attendance Module", () => {
     });
 
     it("should prevent duplicate attendance", async () => {
-        const attPayload = {
-            eventId: eventId,
-            latitude: -6.200000,
-            longitude: 106.816666
-        };
         const res = await app.request("/attendances", {
             method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${userToken}`
-            },
-            body: JSON.stringify(attPayload)
+            headers: { "Authorization": `Bearer ${userToken}` },
+            body: createAttendanceForm({ eventId }),
         }, env);
 
         expect(res.status).toBe(409);

@@ -11,7 +11,7 @@ router.post(
     "/",
     describeRoute({
         summary: "Record Attendance",
-        description: "Submits an attendance check-in. The frontend MUST provide the user's current GPS coordinates (latitude/longitude) and a base64 encoded photo for Face Verification. The system validates if the user is within the event's radius and time window before awarding points.",
+        description: "Submits a multipart attendance check-in with the user's current GPS coordinates and a transient face image. The image is verified by the Face Service and is not retained. The system validates account status, event state, time window, radius, face identity, and duplicate attendance before awarding points.",
         tags: ["Attendances"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -22,7 +22,8 @@ router.post(
         },
     }),
     requireAuth,
-    validator("json", createAttendanceSchema),
+    requireRole(["CITIZEN"]),
+    validator("form", createAttendanceSchema),
     attendanceController.recordAttendance
 );
 

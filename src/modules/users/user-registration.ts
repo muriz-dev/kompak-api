@@ -16,7 +16,7 @@ type RegistrationRepository = Pick<
 
 type RegistrationDependencies = {
     repository: RegistrationRepository;
-    faceEnrollment: FaceEnrollmentClient;
+    faceEnrollment: Pick<FaceEnrollmentClient, "enroll" | "delete">;
     hash: typeof hashPassword;
 };
 

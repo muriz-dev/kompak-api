@@ -3,7 +3,7 @@ import attendanceService from "./attendance.service";
 import { ApiResponse } from "../../utils/api-response";
 
 export const recordAttendance = async (c: Context) => {
-    const payload = c.req.valid("json" as never) as any;
+    const payload = c.req.valid("form" as never) as any;
 
     const data = await attendanceService.recordAttendance(c, payload);
 
