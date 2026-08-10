@@ -1,8 +1,9 @@
 import type { ObjectCannedACL } from "@aws-sdk/client-s3";
 import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import type { KompakBindings } from "../types";
 
-export type Env = CloudflareBindings;
+export type Env = KompakBindings;
 
 const createS3Client = (env: Env) => {
     return new S3Client({

@@ -19,6 +19,12 @@ storageRouter.post(
             200: {
                 description: "Presigned URL generated successfully",
             },
+            403: {
+                description: "The authenticated user cannot upload to the requested folder",
+            },
+            400: {
+                description: "Unsupported image type or file larger than 5 MB",
+            },
         },
     }),
     requireAuth,

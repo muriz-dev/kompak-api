@@ -1,10 +1,18 @@
 import type { Context } from "hono";
 import eventRepository from "./event.repository";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
+import type { EventStatus } from "../../db/schema";
 import { ApiError } from "../../utils/api-error";
 
 export const getAllEvents = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
     return eventRepository.getAll(c, timeframe);
+}
+
+export const getAllAdminEvents = async (
+    c: Context,
+    status?: "DRAFT" | "PUBLISHED" | "CLOSED" | "CANCELLED"
+) => {
+    return eventRepository.getAllAdmin(c, status);
 }
 
 export const getEventById = async (c: Context, eventId: string) => {
@@ -26,7 +34,22 @@ export const fullUpdateEvent = async (c: Context, eventId: string, eventData: Fu
 }
 
 export const partialUpdateEvent = async (c: Context, eventId: string, eventData: PartialUpdateEventSchema) => {
-    await getEventById(c, eventId);
+    const event = await getEventById(c, eventId);
+
+    if (eventData.status && eventData.status !== event.status) {
+        const allowedTransitions: Record<EventStatus, readonly EventStatus[]> = {
+            DRAFT: ["PUBLISHED"],
+            PUBLISHED: ["CLOSED", "CANCELLED"],
+            CLOSED: [],
+            CANCELLED: [],
+        };
+
+        if (!allowedTransitions[event.status].includes(eventData.status)) {
+            throw ApiError.badRequest(
+                `Cannot update event status from ${event.status} to ${eventData.status}`
+            );
+        }
+    }
 
     return eventRepository.partialUpdate(c, eventId, eventData);
 }
@@ -39,6 +62,7 @@ export const removeEvent = async (c: Context, eventId: string) => {
 
 export default {
     getAllEvents,
+    getAllAdminEvents,
     getEventById,
     createEvent,
     fullUpdateEvent,

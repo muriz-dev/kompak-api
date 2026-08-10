@@ -4,10 +4,16 @@ import { ApiResponse } from "../../utils/api-response";
 import { ApiError } from "../../utils/api-error";
 import { generatePresignedPutUrl, getPublicUrl } from "../../libs/storage";
 import type { Env } from "../../types";
+import type { UploadUrlSchema } from "./storage.schema";
 
 export class StorageController {
     async getUploadUrl(c: Context<Env>) {
-        const { folder, contentType, contentLength } = c.req.valid("json" as never) as any;
+        const { folder, contentType, contentLength } = c.req.valid("json" as never) as UploadUrlSchema;
+        const currentUser = c.get("currentUser");
+
+        if (folder === "events" && currentUser?.role !== "ADMIN") {
+            throw ApiError.forbidden("Only admins can upload event images");
+        }
         
         const fileName = uuidv7();
         

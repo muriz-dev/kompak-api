@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { eq, and, gt, gte, lte } from "drizzle-orm";
+import { eq, and, desc, gt, gte, lte } from "drizzle-orm";
 import { getDb } from "../../db/connection";
 import { events } from "../../db/schema";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "../events/event.schema";
@@ -13,7 +13,7 @@ import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema
 export const getAll = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
     const db = getDb(c.env.DB);
     
-    let whereClause = undefined;
+    let whereClause = eq(events.status, "PUBLISHED");
     const now = new Date();
 
     if (timeframe === "upcoming") {
@@ -31,10 +31,27 @@ export const getAll = async (c: Context, timeframe?: "upcoming" | "ongoing") => 
 
     const eventsData = await db.query.events.findMany({
         where: whereClause,
+        orderBy: [desc(events.eventDate)],
     });
 
     return eventsData;
 }
+
+/**
+ * @name getAllAdmin
+ * @description Get every event for the admin management surface
+ */
+export const getAllAdmin = async (
+    c: Context,
+    status?: "DRAFT" | "PUBLISHED" | "CLOSED" | "CANCELLED"
+) => {
+    const db = getDb(c.env.DB);
+
+    return db.query.events.findMany({
+        where: status ? eq(events.status, status) : undefined,
+        orderBy: [desc(events.createdAt)],
+    });
+};
 
 /**
  * @name getById
@@ -121,6 +138,7 @@ export const remove = async (c: Context, eventId: string) => {
 
 export default {
     getAll,
+    getAllAdmin,
     getById,
     create,
     fullUpdate,

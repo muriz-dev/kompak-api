@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./event.controller";
-import { paramSchema, querySchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
+import { adminQuerySchema, paramSchema, querySchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const eventRouter = new Hono();
@@ -20,6 +20,31 @@ eventRouter.get(
     }),
     validator("query", querySchema),
     controller.getAllEvents,
+);
+
+eventRouter.get(
+    "/admin",
+    describeRoute({
+        summary: "Get Events for Admin Management",
+        description: "Admin ONLY. Retrieves events in every lifecycle status. Optionally filter with `?status=DRAFT|PUBLISHED|CLOSED|CANCELLED`.",
+        tags: ["Events"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: {
+                description: "Admin events retrieved successfully",
+            },
+            401: {
+                description: "Authentication required",
+            },
+            403: {
+                description: "Admin role required",
+            },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("query", adminQuerySchema),
+    controller.getAllAdminEvents,
 );
 
 eventRouter.get(
@@ -45,7 +70,7 @@ eventRouter.post(
     "/",
     describeRoute({
         summary: "Create Event",
-        description: "Admin ONLY. Creates a new community event. Note that new events are created in 'DRAFT' status by default. An admin must explicitly publish it via an update request for it to be visible to citizens.",
+        description: "Admin ONLY. Creates a new community event. The status defaults to 'DRAFT' when omitted; send 'PUBLISHED' to create and publish it immediately. An optional bannerUrl may reference an image uploaded through the storage API.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -53,7 +78,7 @@ eventRouter.post(
                 description: "Event created successfully",
             },
             400: {
-                description: "Invalid request body",
+                description: "Invalid event data, schedule, or location",
             },
         },
     }),
@@ -101,7 +126,7 @@ eventRouter.patch(
                 description: "Event updated successfully",
             },
             400: {
-                description: "Invalid request body",
+                description: "Invalid request body or event status transition",
             },
             404: {
                 description: "Event not found",

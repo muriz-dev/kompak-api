@@ -1,18 +1,18 @@
 import type { Context, Env, ValidationTargets } from "hono";
 import eventService from "./event.service";
-import type { ParamSchema, QuerySchema, CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
+import type { AdminQuerySchema, ParamSchema, QuerySchema, CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "./event.schema";
 import { ApiResponse } from "../../utils/api-response";
 
 type EventContext = Context<Env, any, {
     in: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateEventSchema | FullUpdateEventSchema | PartialUpdateEventSchema,
-        query: QuerySchema,
+        query: QuerySchema & AdminQuerySchema,
     };
     out: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateEventSchema | FullUpdateEventSchema | PartialUpdateEventSchema,
-        query: QuerySchema,
+        query: QuerySchema & AdminQuerySchema,
     };
 }>;
 
@@ -22,6 +22,14 @@ export const getAllEvents = async (ctx: EventContext) => {
     const events = await eventService.getAllEvents(ctx, timeframe);
 
     return ApiResponse.ok(ctx, "Events retrieved successfully", events);
+}
+
+export const getAllAdminEvents = async (ctx: EventContext) => {
+    const { status } = ctx.req.valid("query") || {};
+
+    const events = await eventService.getAllAdminEvents(ctx, status);
+
+    return ApiResponse.ok(ctx, "Admin events retrieved successfully", events);
 }
 
 export const getEventById = async (ctx: EventContext) => {
@@ -68,6 +76,7 @@ export const removeEvent = async (ctx: EventContext) => {
 
 export default {
     getAllEvents,
+    getAllAdminEvents,
     getEventById,
     createEvent,
     fullUpdateEvent,
