@@ -13,7 +13,7 @@ storageRouter.post(
     describeRoute({
         tags: ["Storage"],
         summary: "Generate Presigned Upload URL",
-        description: "Generates a secure presigned URL to upload a file (e.g. user avatar, event banner) directly to Cloudflare R2 storage. The frontend must PUT the file binary to the returned URL.",
+        description: "Generates a secure presigned URL to upload a file (e.g. user avatar, event banner) directly to the configured S3-compatible storage provider. The frontend must PUT the file binary to the returned URL.",
         security: [{ bearerAuth: [] }],
         responses: {
             200: {

@@ -5,6 +5,8 @@ export type KompakBindings = CloudflareBindings & {
     FACE_API_KEY: string;
     S3_ACCESS_KEY_ID: string;
     S3_SECRET_ACCESS_KEY: string;
+    STORAGE_PUBLIC_URL?: string;
+    STORAGE_FORCE_PATH_STYLE?: string;
 };
 
 export type CurrentUser = typeof users.$inferSelect;
