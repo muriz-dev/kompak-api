@@ -51,7 +51,7 @@ eventRouter.get(
     "/:eventId",
     describeRoute({
         summary: "Get Event by ID",
-        description: "Retrieves the full details of a specific event. Use this to populate the Event Detail page. Contains location coordinates, radius, and schedule required for check-in validation.",
+        description: "Retrieves the full details of a published or completed event. Draft and cancelled events are not exposed through this public endpoint. Contains location coordinates, radius, and schedule required for check-in validation.",
         tags: ["Events"],
         responses: {
             200: {

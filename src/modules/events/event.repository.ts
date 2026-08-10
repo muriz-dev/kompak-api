@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import { eq, and, desc, gt, gte, lte } from "drizzle-orm";
+import { eq, and, asc, desc, gt, gte, inArray, lte } from "drizzle-orm";
 import { getDb } from "../../db/connection";
 import { events } from "../../db/schema";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "../events/event.schema";
@@ -12,26 +12,30 @@ import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema
  */
 export const getAll = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
     const db = getDb(c.env.DB);
-    
-    let whereClause = eq(events.status, "PUBLISHED");
     const now = new Date();
 
-    if (timeframe === "upcoming") {
-        whereClause = and(
+    const whereClause = timeframe === "upcoming"
+        ? and(
             eq(events.status, "PUBLISHED"),
             gt(events.attendanceStartTime, now)
-        );
-    } else if (timeframe === "ongoing") {
-        whereClause = and(
+        )
+        : timeframe === "ongoing"
+        ? and(
             eq(events.status, "PUBLISHED"),
             lte(events.attendanceStartTime, now),
             gte(events.attendanceEndTime, now)
-        );
-    }
+        )
+        : eq(events.status, "PUBLISHED");
+
+    const orderBy = timeframe === "upcoming"
+        ? [asc(events.attendanceStartTime)]
+        : timeframe === "ongoing"
+        ? [asc(events.attendanceEndTime)]
+        : [desc(events.eventDate)];
 
     const eventsData = await db.query.events.findMany({
         where: whereClause,
-        orderBy: [desc(events.eventDate)],
+        orderBy,
     });
 
     return eventsData;
@@ -68,6 +72,21 @@ export const getById = async (c: Context, eventId: string) => {
     });
 
     return event;
+}
+
+/**
+ * @name getPublicById
+ * @description Get a resident-visible event without exposing drafts or cancellations
+ */
+export const getPublicById = async (c: Context, eventId: string) => {
+    const db = getDb(c.env.DB);
+
+    return db.query.events.findFirst({
+        where: and(
+            eq(events.id, eventId),
+            inArray(events.status, ["PUBLISHED", "CLOSED"]),
+        ),
+    });
 }
 
 /**
@@ -140,6 +159,7 @@ export default {
     getAll,
     getAllAdmin,
     getById,
+    getPublicById,
     create,
     fullUpdate,
     partialUpdate,

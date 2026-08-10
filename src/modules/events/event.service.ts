@@ -16,6 +16,14 @@ export const getAllAdminEvents = async (
 }
 
 export const getEventById = async (c: Context, eventId: string) => {
+    const event = await eventRepository.getPublicById(c, eventId);
+
+    if (!event) throw ApiError.notFound(`Event with ID ${eventId} not found`);
+
+    return event;
+}
+
+const getManagedEventById = async (c: Context, eventId: string) => {
     const event = await eventRepository.getById(c, eventId);
 
     if (!event) throw ApiError.notFound(`Event with ID ${eventId} not found`);
@@ -28,13 +36,13 @@ export const createEvent = async (c: Context, eventData: CreateEventSchema) => {
 }
 
 export const fullUpdateEvent = async (c: Context, eventId: string, eventData: FullUpdateEventSchema) => {
-    await getEventById(c, eventId);
+    await getManagedEventById(c, eventId);
 
     return eventRepository.fullUpdate(c, eventId, eventData);
 }
 
 export const partialUpdateEvent = async (c: Context, eventId: string, eventData: PartialUpdateEventSchema) => {
-    const event = await getEventById(c, eventId);
+    const event = await getManagedEventById(c, eventId);
 
     if (eventData.status && eventData.status !== event.status) {
         const allowedTransitions: Record<EventStatus, readonly EventStatus[]> = {
@@ -55,7 +63,7 @@ export const partialUpdateEvent = async (c: Context, eventId: string, eventData:
 }
 
 export const removeEvent = async (c: Context, eventId: string) => {
-    await getEventById(c, eventId);
+    await getManagedEventById(c, eventId);
 
     return eventRepository.remove(c, eventId);
 }

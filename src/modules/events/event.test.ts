@@ -245,6 +245,9 @@ describe("Event Module", () => {
         expect(res.status).toBe(200);
         const data = await res.json() as any;
         expect(data.data.status).toBe("CLOSED");
+
+        const publicDetail = await app.request(`/events/${draftEventId}`, undefined, env);
+        expect(publicDetail.status).toBe(200);
     });
 
     it("should let an admin cancel a published event", async () => {
@@ -292,6 +295,9 @@ describe("Event Module", () => {
     });
 
     describe("Event Filtering by Timeframe", () => {
+        let publishedEventId: string;
+        let hiddenDraftEventId: string;
+
         beforeAll(async () => {
             const { drizzle } = await import("drizzle-orm/d1");
             const { events } = await import("../../db/schema");
@@ -300,14 +306,29 @@ describe("Event Module", () => {
             const now = Date.now();
             
             // Upcoming Event (Published, starts in 1 day)
+            publishedEventId = uuidv7();
             await db.insert(events).values({
-                id: uuidv7(),
+                id: publishedEventId,
                 createdBy: adminId,
                 title: "Upcoming Event",
                 description: "Starts tomorrow",
                 eventDate: new Date(now + 86400000),
                 attendanceStartTime: new Date(now + 86400000),
                 attendanceEndTime: new Date(now + 90000000),
+                rewardPoints: 10,
+                latitude: 0,
+                longitude: 0,
+                status: "PUBLISHED"
+            });
+
+            await db.insert(events).values({
+                id: uuidv7(),
+                createdBy: adminId,
+                title: "Far Upcoming Event",
+                description: "Starts after the nearer event",
+                eventDate: new Date(now + 259200000),
+                attendanceStartTime: new Date(now + 259200000),
+                attendanceEndTime: new Date(now + 262800000),
                 rewardPoints: 10,
                 latitude: 0,
                 longitude: 0,
@@ -330,8 +351,9 @@ describe("Event Module", () => {
             });
             
             // Draft Event (Starts tomorrow but not published)
+            hiddenDraftEventId = uuidv7();
             await db.insert(events).values({
-                id: uuidv7(),
+                id: hiddenDraftEventId,
                 createdBy: adminId,
                 title: "Draft Event",
                 description: "Not published",
@@ -352,6 +374,11 @@ describe("Event Module", () => {
             expect(data.data.some((event: any) => event.title === "Upcoming Event")).toBe(true);
             expect(data.data.some((event: any) => event.title === "Draft Event")).toBe(false);
             expect(data.data.every((event: any) => event.status === "PUBLISHED")).toBe(true);
+            expect(
+                data.data.findIndex((event: any) => event.title === "Upcoming Event")
+            ).toBeLessThan(
+                data.data.findIndex((event: any) => event.title === "Far Upcoming Event")
+            );
         });
 
         it("should retrieve only ongoing events when timeframe=ongoing", async () => {
@@ -368,6 +395,19 @@ describe("Event Module", () => {
             const data = await res.json() as any;
             expect(data.data.every((event: any) => event.status === "PUBLISHED")).toBe(true);
             expect(data.data.some((event: any) => event.title === "Draft Event")).toBe(false);
+        });
+
+        it("should retrieve a published event by ID", async () => {
+            const res = await app.request(`/events/${publishedEventId}`, undefined, env);
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.data.id).toBe(publishedEventId);
+            expect(data.data.status).toBe("PUBLISHED");
+        });
+
+        it("should not expose a draft event by ID", async () => {
+            const res = await app.request(`/events/${hiddenDraftEventId}`, undefined, env);
+            expect(res.status).toBe(404);
         });
     });
 });
