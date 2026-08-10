@@ -23,7 +23,7 @@ export const getEventById = async (c: Context, eventId: string) => {
     return event;
 }
 
-const getManagedEventById = async (c: Context, eventId: string) => {
+export const getManagedEventById = async (c: Context, eventId: string) => {
     const event = await eventRepository.getById(c, eventId);
 
     if (!event) throw ApiError.notFound(`Event with ID ${eventId} not found`);
@@ -72,6 +72,7 @@ export default {
     getAllEvents,
     getAllAdminEvents,
     getEventById,
+    getManagedEventById,
     createEvent,
     fullUpdateEvent,
     partialUpdateEvent,

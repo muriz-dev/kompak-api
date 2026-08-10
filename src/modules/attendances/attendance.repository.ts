@@ -41,9 +41,11 @@ export const getAttendancesByEventId = async (c: Context, eventId: string) => {
         with: {
             user: {
                 columns: {
-                    password: false
+                    password: false,
+                    faceEmbeddingId: false,
                 }
-            }
+            },
+            eventTransaction: true,
         }
     });
 };

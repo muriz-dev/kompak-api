@@ -40,6 +40,14 @@ export const getEventById = async (ctx: EventContext) => {
     return ApiResponse.ok(ctx, "Event retrieved successfully", event);
 }
 
+export const getManagedEventById = async (ctx: EventContext) => {
+    const { eventId } = ctx.req.valid("param");
+
+    const event = await eventService.getManagedEventById(ctx, eventId);
+
+    return ApiResponse.ok(ctx, "Admin event retrieved successfully", event);
+}
+
 export const createEvent = async (ctx: EventContext) => {
     const eventData = ctx.req.valid("json");
 
@@ -78,6 +86,7 @@ export default {
     getAllEvents,
     getAllAdminEvents,
     getEventById,
+    getManagedEventById,
     createEvent,
     fullUpdateEvent,
     partialUpdateEvent,

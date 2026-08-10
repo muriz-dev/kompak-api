@@ -97,6 +97,24 @@ describe("Event Module", () => {
         expect(data.data.some((event: any) => event.title === "Test Event")).toBe(true);
     });
 
+    it("should expose event details in any lifecycle state only to admins", async () => {
+        const unauthenticated = await app.request(`/events/admin/${draftEventId}`, undefined, env);
+        expect(unauthenticated.status).toBe(401);
+
+        const forbidden = await app.request(`/events/admin/${draftEventId}`, {
+            headers: { "Authorization": `Bearer ${citizenToken}` }
+        }, env);
+        expect(forbidden.status).toBe(403);
+
+        const res = await app.request(`/events/admin/${draftEventId}`, {
+            headers: { "Authorization": `Bearer ${adminToken}` }
+        }, env);
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.data.id).toBe(draftEventId);
+        expect(data.data.status).toBe("DRAFT");
+    });
+
     it("should create a published event with its banner URL", async () => {
         const bannerUrl = "https://kompak-api.test/storage/events/banner.png";
         const start = new Date(Date.now() + 86400000);

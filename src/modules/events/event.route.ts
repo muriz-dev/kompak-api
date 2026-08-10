@@ -48,6 +48,34 @@ eventRouter.get(
 );
 
 eventRouter.get(
+    "/admin/:eventId",
+    describeRoute({
+        summary: "Get Event by ID for Admin Management",
+        description: "Admin ONLY. Retrieves an event in any lifecycle state, including draft and cancelled events, for detail and edit screens.",
+        tags: ["Events"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: {
+                description: "Admin event retrieved successfully",
+            },
+            401: {
+                description: "Authentication required",
+            },
+            403: {
+                description: "Admin role required",
+            },
+            404: {
+                description: "Event not found",
+            },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("param", paramSchema),
+    controller.getManagedEventById,
+);
+
+eventRouter.get(
     "/:eventId",
     describeRoute({
         summary: "Get Event by ID",

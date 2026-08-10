@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { eq, and, asc, desc, gt, gte, inArray, lte } from "drizzle-orm";
 import { getDb } from "../../db/connection";
-import { events } from "../../db/schema";
+import { events, eventTransactions } from "../../db/schema";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "../events/event.schema";
 
 /**
@@ -150,7 +150,11 @@ export const partialUpdate = async (c: Context, eventId: string, eventData: Part
 export const remove = async (c: Context, eventId: string) => {
     const db = getDb(c.env.DB);
 
-    const [deletedEvent] = await db.delete(events).where(eq(events.id, eventId)).returning();
+    const [, deletedEvents] = await db.batch([
+        db.delete(eventTransactions).where(eq(eventTransactions.eventId, eventId)),
+        db.delete(events).where(eq(events.id, eventId)).returning(),
+    ]);
+    const [deletedEvent] = deletedEvents;
 
     return deletedEvent;
 }

@@ -154,6 +154,9 @@ describe("Attendance Module", () => {
         const data = await res.json() as any;
         expect(data.data.length).toBeGreaterThan(0);
         expect(data.data[0].userId).toBe(userId);
+        expect(data.data[0].eventTransaction.points).toBe(50);
+        expect(data.data[0].user.password).toBeUndefined();
+        expect(data.data[0].user.faceEmbeddingId).toBeUndefined();
     });
 
     it("should prevent citizen from retrieving event attendances", async () => {
@@ -165,5 +168,23 @@ describe("Attendance Module", () => {
         }, env);
 
         expect(res.status).toBe(403);
+    });
+
+    it("should let an admin delete an event that already has attendance history", async () => {
+        const res = await app.request(`/events/${eventId}`, {
+            method: "DELETE",
+            headers: {
+                "Authorization": `Bearer ${adminToken}`
+            }
+        }, env);
+
+        expect(res.status).toBe(200);
+
+        const detail = await app.request(`/events/admin/${eventId}`, {
+            headers: {
+                "Authorization": `Bearer ${adminToken}`
+            }
+        }, env);
+        expect(detail.status).toBe(404);
     });
 });
