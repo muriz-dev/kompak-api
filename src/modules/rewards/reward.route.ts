@@ -7,6 +7,21 @@ import { requireAuth, requireRole } from "../../middlewares/auth";
 const rewardRouter = new Hono();
 
 rewardRouter.get(
+    "/point-shop",
+    describeRoute({
+        summary: "Get Point Shop Catalog",
+        description: "Returns in-stock active Point Shop rewards from verified providers, including pickup information required by the resident app.",
+        tags: ["Rewards"],
+        responses: {
+            200: {
+                description: "Point Shop catalog retrieved successfully",
+            },
+        },
+    }),
+    rewardController.getPointShopCatalog,
+);
+
+rewardRouter.get(
     "/",
     describeRoute({
         summary: "Get All Rewards",

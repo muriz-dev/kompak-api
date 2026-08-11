@@ -8,6 +8,10 @@ export const getAllRewards = async (c: Context, source?: "POINT_SHOP" | "LEADERB
     return rewardRepository.getAll(c, source);
 }
 
+export const getPointShopCatalog = async (c: Context) => {
+    return rewardRepository.getPointShopCatalog(c);
+}
+
 export const getRewardById = async (c: Context, rewardId: string) => {
     const reward = await rewardRepository.getById(c, rewardId);
 
@@ -76,6 +80,7 @@ export const removeReward = async (c: Context, rewardId: string) => {
 
 export default {
     getAllRewards,
+    getPointShopCatalog,
     getRewardById,
     createReward,
     fullUpdateReward,

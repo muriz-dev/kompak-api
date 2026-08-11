@@ -24,6 +24,12 @@ export const getAllRewards = async (c: RewardContext) => {
     return ApiResponse.ok(c, "Rewards retrieved successfully", rewards);
 }
 
+export const getPointShopCatalog = async (c: RewardContext) => {
+    const rewards = await rewardService.getPointShopCatalog(c);
+
+    return ApiResponse.ok(c, "Point Shop catalog retrieved successfully", rewards);
+}
+
 export const getRewardById = async (c: RewardContext) => {
     const { rewardId } = c.req.valid("param");
 
@@ -68,6 +74,7 @@ export const removeReward = async (c: RewardContext) => {
 
 export default {
     getAllRewards,
+    getPointShopCatalog,
     getRewardById,
     createReward,
     fullUpdateReward,

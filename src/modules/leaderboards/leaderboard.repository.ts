@@ -1,21 +1,79 @@
-import { desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, gt } from "drizzle-orm";
 import type { Context } from "hono";
 import { getDb } from "../../db/connection";
-import { users, rewards, badgeDefinitions, badgeAwards, rewardRedemptions } from "../../db/schema";
+import {
+    users,
+    rewards,
+    badgeDefinitions,
+    badgeAwards,
+    leaderboardDistributions,
+    rewardRedemptions,
+} from "../../db/schema";
 import { uuidv7 } from "uuidv7";
 
-export const getLeaderboard = async (c: Context, limit: number = 50) => {
+export const getLeaderboard = async (
+    c: Context,
+    currentUserId: string,
+    limit: number = 50,
+) => {
     const db = getDb(c.env.DB);
-    
-    return db.query.users.findMany({
-        columns: {
-            id: true,
-            name: true,
-            leaderboardPoints: true,
+
+    const citizens = await db
+        .select({
+            id: users.id,
+            name: users.name,
+            points: users.leaderboardPoints,
+        })
+        .from(users)
+        .where(and(eq(users.role, "CITIZEN"), eq(users.status, "ACTIVE")))
+        .orderBy(desc(users.leaderboardPoints), asc(users.name), asc(users.id))
+        .all();
+
+    const entries = citizens.map((citizen, index) => ({
+        id: citizen.id,
+        name: citizen.name,
+        points: citizen.points,
+        rank: index + 1,
+    }));
+
+    const configuredRewards = await db
+        .select({
+            id: rewards.id,
+            rank: rewards.leaderboardPosition,
+            title: rewards.name,
+            description: rewards.description,
+            imageUrl: rewards.imageUrl,
+        })
+        .from(rewards)
+        .where(and(
+            eq(rewards.source, "LEADERBOARD"),
+            eq(rewards.status, "ACTIVE"),
+            gt(rewards.stock, 0),
+        ))
+        .orderBy(asc(rewards.leaderboardPosition), asc(rewards.name))
+        .all();
+
+    return {
+        entries: entries.slice(0, limit),
+        currentUser: entries.find((entry) => entry.id === currentUserId) ?? null,
+        stats: {
+            totalCitizens: entries.length,
+            participatingCitizens: entries.filter((entry) => entry.points > 0).length,
+            totalPoints: entries.reduce((total, entry) => total + entry.points, 0),
         },
-        orderBy: [desc(users.leaderboardPoints)],
-        limit: limit,
+        rewards: configuredRewards
+            .filter((reward) => reward.rank != null && reward.rank >= 1 && reward.rank <= 3)
+            .map((reward) => ({ ...reward, rank: reward.rank as number })),
+    };
+};
+
+export const hasDistribution = async (c: Context, period: string) => {
+    const db = getDb(c.env.DB);
+    const distribution = await db.query.leaderboardDistributions.findFirst({
+        columns: { id: true },
+        where: eq(leaderboardDistributions.period, period),
     });
+    return distribution != null;
 };
 
 export const distributeAndResetLeaderboard = async (c: Context, adminId: string, month: number, year: number) => {
@@ -27,8 +85,8 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
         leaderboardPoints: users.leaderboardPoints
     })
     .from(users)
-    .where(eq(users.role, "CITIZEN"))
-    .orderBy(desc(users.leaderboardPoints))
+    .where(and(eq(users.role, "CITIZEN"), eq(users.status, "ACTIVE")))
+    .orderBy(desc(users.leaderboardPoints), asc(users.name), asc(users.id))
     .limit(3)
     .all();
 
@@ -37,7 +95,11 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
     // 2. Fetch Leaderboard Rewards
     const lbRewards = await db.select()
         .from(rewards)
-        .where(eq(rewards.source, "LEADERBOARD"))
+        .where(and(
+            eq(rewards.source, "LEADERBOARD"),
+            eq(rewards.status, "ACTIVE"),
+            gt(rewards.stock, 0),
+        ))
         .all();
     
     // 3. Fetch Leaderboard Badges
@@ -48,6 +110,14 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
 
     const batchOps: any[] = [];
     const period = `${year}-${String(month).padStart(2, '0')}`;
+
+    batchOps.push(
+        db.insert(leaderboardDistributions).values({
+            id: uuidv7(),
+            period,
+            distributedBy: adminId,
+        })
+    );
 
     for (let i = 0; i < usersWithPoints.length; i++) {
         const user = usersWithPoints[i];
@@ -63,7 +133,9 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
                     rewardId: reward.id,
                     providerId: reward.providerId,
                     pointsSpent: 0, // Leaderboard rewards are free
+                    idempotencyKey: `leaderboard-${period}-${user.id}-${reward.id}`,
                     status: "PENDING", // Wait for admin to deliver/approve physical rewards
+                    expiresAt: new Date(Date.now() + reward.validityDays * 86_400_000),
                 })
             );
         }
@@ -88,7 +160,9 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
 
     // Reset ALL users' leaderboard points
     batchOps.push(
-        db.update(users).set({ leaderboardPoints: 0 })
+        db.update(users)
+            .set({ leaderboardPoints: 0 })
+            .where(eq(users.role, "CITIZEN"))
     );
 
     // Execute transaction if there's any operation (usually there is at least the reset)
@@ -99,5 +173,6 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
 
 export default {
     getLeaderboard,
+    hasDistribution,
     distributeAndResetLeaderboard
 };

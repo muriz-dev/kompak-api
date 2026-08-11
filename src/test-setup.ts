@@ -2,6 +2,10 @@ import { applyD1Migrations } from "cloudflare:test";
 import { env } from "cloudflare:workers";
 // @ts-ignore
 import sqlContent from "../drizzle/0000_glossy_madame_hydra.sql?raw";
+// @ts-ignore
+import pointShopSqlContent from "../drizzle/0001_wet_steve_rogers.sql?raw";
+// @ts-ignore
+import leaderboardSqlContent from "../drizzle/0002_premium_red_shift.sql?raw";
 
 let initialized = false;
 
@@ -17,6 +21,20 @@ export const applyMigrations = async () => {
         {
             name: "0000_glossy_madame_hydra.sql",
             queries: queries
+        },
+        {
+            name: "0001_wet_steve_rogers.sql",
+            queries: pointShopSqlContent
+                .split("--> statement-breakpoint")
+                .map((q: string) => q.trim())
+                .filter(Boolean),
+        },
+        {
+            name: "0002_premium_red_shift.sql",
+            queries: leaderboardSqlContent
+                .split("--> statement-breakpoint")
+                .map((q: string) => q.trim())
+                .filter(Boolean),
         }
     ];
 

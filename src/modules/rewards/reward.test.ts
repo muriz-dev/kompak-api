@@ -73,6 +73,25 @@ describe("Reward Module", () => {
         expect(data.data.name).toBe("Test Reward");
     });
 
+    it("should expose a mobile-ready Point Shop catalog", async () => {
+        const res = await app.request("/rewards/point-shop", undefined, env);
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        const reward = data.data.find((item: any) => item.id === rewardId);
+        expect(reward).toMatchObject({
+            description: "",
+            pointsRequired: 100,
+            stock: 50,
+            validityDays: 7,
+            isFeatured: false,
+            provider: {
+                id: providerId,
+                name: "Provider",
+                address: "Address",
+            },
+        });
+    });
+
     describe("Reward Filtering by Source", () => {
         beforeAll(async () => {
             const { drizzle } = await import("drizzle-orm/d1");
