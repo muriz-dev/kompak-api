@@ -25,7 +25,11 @@ export const getLeaderboard = async (
             points: users.leaderboardPoints,
         })
         .from(users)
-        .where(and(eq(users.role, "CITIZEN"), eq(users.status, "ACTIVE")))
+        .where(and(
+            eq(users.role, "CITIZEN"),
+            eq(users.status, "ACTIVE"),
+            gt(users.leaderboardPoints, 0),
+        ))
         .orderBy(desc(users.leaderboardPoints), asc(users.name), asc(users.id))
         .all();
 
@@ -58,7 +62,7 @@ export const getLeaderboard = async (
         currentUser: entries.find((entry) => entry.id === currentUserId) ?? null,
         stats: {
             totalCitizens: entries.length,
-            participatingCitizens: entries.filter((entry) => entry.points > 0).length,
+            participatingCitizens: entries.length,
             totalPoints: entries.reduce((total, entry) => total + entry.points, 0),
         },
         rewards: configuredRewards
@@ -85,12 +89,14 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
         leaderboardPoints: users.leaderboardPoints
     })
     .from(users)
-    .where(and(eq(users.role, "CITIZEN"), eq(users.status, "ACTIVE")))
+    .where(and(
+        eq(users.role, "CITIZEN"),
+        eq(users.status, "ACTIVE"),
+        gt(users.leaderboardPoints, 0),
+    ))
     .orderBy(desc(users.leaderboardPoints), asc(users.name), asc(users.id))
     .limit(3)
     .all();
-
-    const usersWithPoints = topUsers.filter(u => (u.leaderboardPoints ?? 0) > 0);
 
     // 2. Fetch Leaderboard Rewards
     const lbRewards = await db.select()
@@ -119,8 +125,8 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
         })
     );
 
-    for (let i = 0; i < usersWithPoints.length; i++) {
-        const user = usersWithPoints[i];
+    for (let i = 0; i < topUsers.length; i++) {
+        const user = topUsers[i];
         const rank = i + 1;
 
         // Find reward for this rank

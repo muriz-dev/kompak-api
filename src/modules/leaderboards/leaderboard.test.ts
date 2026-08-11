@@ -7,6 +7,7 @@ import { uuidv7 } from "uuidv7";
 describe("Leaderboard Module", () => {
     let adminToken: string;
     let citizenToken: string;
+    let zeroPointToken: string;
     let u1: string, u2: string, u3: string, u4: string;
 
     beforeAll(async () => {
@@ -51,6 +52,8 @@ describe("Leaderboard Module", () => {
         u3 = await createCitizen("User3", 100); // Rank 3
         u4 = await createCitizen("User4", 50);  // Rank 4
         citizenToken = await generateTestToken(u4, "CITIZEN");
+        const zeroPointUserId = await createCitizen("ZeroPointUser", 0);
+        zeroPointToken = await generateTestToken(zeroPointUserId, "CITIZEN");
 
         await db.insert(users).values({
             id: uuidv7(), name: "Inactive User", email: "inactive@test.com", password: "pwd",
@@ -71,6 +74,23 @@ describe("Leaderboard Module", () => {
             { id: uuidv7(), providerId: providerId, name: "Gold Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 1 },
             { id: uuidv7(), providerId: providerId, name: "Silver Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 2 },
         ]);
+    });
+
+    it("should exclude zero-point citizens, including the current user", async () => {
+        const res = await app.request("/leaderboard", {
+            headers: { "Authorization": `Bearer ${zeroPointToken}` },
+        }, env);
+        expect(res.status).toBe(200);
+
+        const data = await res.json() as any;
+        expect(data.data.currentUser).toBeNull();
+        expect(data.data.entries).toHaveLength(4);
+        expect(data.data.entries.every((entry: any) => entry.points > 0)).toBe(true);
+        expect(data.data.stats).toEqual({
+            totalCitizens: 4,
+            participatingCitizens: 4,
+            totalPoints: 950,
+        });
     });
 
     it("should retrieve the leaderboard with correct ordering", async () => {

@@ -10,7 +10,7 @@ router.get(
     "/",
     describeRoute({
         summary: "Get Leaderboard",
-        description: "Fetches the current community leaderboard for active citizens, including totals, configured Top-3 rewards, and the authenticated citizen's rank.",
+        description: "Fetches the current community leaderboard for active citizens with more than zero points, including totals, configured Top-3 rewards, and the authenticated citizen's rank when eligible.",
         tags: ["Leaderboards"],
         security: [{ bearerAuth: [] }],
         responses: {
