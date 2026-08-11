@@ -5,4 +5,12 @@ export const createAnnouncementSchema = z.object({
     description: z.string().min(10),
 });
 
+export const updateAnnouncementSchema = createAnnouncementSchema
+    .partial()
+    .refine(
+        (data) => data.title !== undefined || data.description !== undefined,
+        { message: "At least one announcement field is required" },
+    );
+
 export type CreateAnnouncementInput = z.infer<typeof createAnnouncementSchema>;
+export type UpdateAnnouncementInput = z.infer<typeof updateAnnouncementSchema>;

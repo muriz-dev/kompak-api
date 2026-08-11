@@ -101,6 +101,38 @@ describe("Announcements Module", () => {
         expect(data.data.description).toContain("maintenance");
     });
 
+    it("should allow admin to update an announcement", async () => {
+        const res = await app.request(`/announcements/${announcementId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                title: "Updated Important Notice",
+                description: "The maintenance schedule has been updated.",
+            })
+        }, env);
+
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.data.title).toBe("Updated Important Notice");
+        expect(data.data.description).toContain("updated");
+    });
+
+    it("should prevent citizen from updating an announcement", async () => {
+        const res = await app.request(`/announcements/${announcementId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
+            body: JSON.stringify({ title: "Citizen Edit Attempt" })
+        }, env);
+
+        expect(res.status).toBe(403);
+    });
+
     it("should allow admin to delete announcement", async () => {
         const res = await app.request(`/announcements/${announcementId}`, {
             method: "DELETE",

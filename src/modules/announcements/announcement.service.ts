@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import announcementRepository from "./announcement.repository";
 import { ApiError } from "../../utils/api-error";
-import type { CreateAnnouncementInput } from "./announcement.schema";
+import type { CreateAnnouncementInput, UpdateAnnouncementInput } from "./announcement.schema";
 
 export const getAnnouncements = async (c: Context) => {
     return announcementRepository.getAnnouncements(c);
@@ -21,6 +21,11 @@ export const createAnnouncement = async (c: Context, data: CreateAnnouncementInp
     return { announcementId };
 };
 
+export const updateAnnouncement = async (c: Context, id: string, data: UpdateAnnouncementInput) => {
+    await getAnnouncementById(c, id);
+    return announcementRepository.updateAnnouncement(c, id, data);
+};
+
 export const deleteAnnouncement = async (c: Context, id: string) => {
     const announcement = await announcementRepository.getAnnouncementById(c, id);
     if (!announcement) {
@@ -33,5 +38,6 @@ export default {
     getAnnouncements,
     getAnnouncementById,
     createAnnouncement,
+    updateAnnouncement,
     deleteAnnouncement,
 };
