@@ -164,7 +164,7 @@ describe("Event Module", () => {
             }),
         }, env);
 
-        expect(invalidWindowResponse.status).toBe(400);
+        expect(invalidWindowResponse.status).toBe(422);
     });
 
     it("should hide draft events from the public event list", async () => {
