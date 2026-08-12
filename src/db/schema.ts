@@ -39,6 +39,7 @@ export const PROVIDER_STATUS = [
     "PENDING",
     "VERIFIED",
     "REJECTED",
+    "INACTIVE",
 ] as const;
 export type ProviderStatus = (typeof PROVIDER_STATUS)[number];
 

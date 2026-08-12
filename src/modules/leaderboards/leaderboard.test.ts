@@ -9,6 +9,7 @@ describe("Leaderboard Module", () => {
     let citizenToken: string;
     let zeroPointToken: string;
     let u1: string, u2: string, u3: string, u4: string;
+    let rankOneRewardId: string, rankTwoRewardId: string;
 
     beforeAll(async () => {
         await applyMigrations();
@@ -70,9 +71,11 @@ describe("Leaderboard Module", () => {
         ]);
 
         // 4. Create Leaderboard Rewards
+        rankOneRewardId = uuidv7();
+        rankTwoRewardId = uuidv7();
         await db.insert(rewards).values([
-            { id: uuidv7(), providerId: providerId, name: "Gold Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 1 },
-            { id: uuidv7(), providerId: providerId, name: "Silver Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 2 },
+            { id: rankOneRewardId, providerId: providerId, name: "Gold Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 1 },
+            { id: rankTwoRewardId, providerId: providerId, name: "Silver Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 2 },
         ]);
     });
 
@@ -124,6 +127,12 @@ describe("Leaderboard Module", () => {
     it("should process distribution and reset points", async () => {
         const month = new Date().getMonth() + 1; // Current month
         const year = new Date().getFullYear();
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { rewards } = await import("../../db/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = drizzle(env.DB);
+        expect((await db.select().from(rewards).where(eq(rewards.id, rankOneRewardId)).get())?.stock).toBe(10);
+        expect((await db.select().from(rewards).where(eq(rewards.id, rankTwoRewardId)).get())?.stock).toBe(10);
 
         const res = await app.request("/leaderboard/distribute", {
             method: "POST",
@@ -165,7 +174,7 @@ describe("Leaderboard Module", () => {
 
     it("should have awarded badges to top 3 and rewards up to available ranks", async () => {
         const { drizzle } = await import("drizzle-orm/d1");
-        const { badgeAwards, rewardRedemptions } = await import("../../db/schema");
+        const { badgeAwards, rewardRedemptions, rewards } = await import("../../db/schema");
         const { eq } = await import("drizzle-orm");
         const db = drizzle(env.DB);
 
@@ -193,5 +202,9 @@ describe("Leaderboard Module", () => {
         // Check u4 (Rank 4)
         const u4Badges = await db.select().from(badgeAwards).where(eq(badgeAwards.userId, u4)).all();
         expect(u4Badges.length).toBe(0); // None
+
+        const configuredRewards = await db.select().from(rewards).where(eq(rewards.source, "LEADERBOARD")).all();
+        expect(configuredRewards.find((reward) => reward.id === rankOneRewardId)?.stock).toBe(9);
+        expect(configuredRewards.find((reward) => reward.id === rankTwoRewardId)?.stock).toBe(9);
     });
 });

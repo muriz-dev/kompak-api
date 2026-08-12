@@ -1,8 +1,8 @@
 import type { Context } from "hono";
-import { and, asc, desc, eq, gt } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, like, ne } from "drizzle-orm";
 import { getDb } from "../../db/connection";
 import { providers, rewards } from "../../db/schema";
-import type { CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSchema } from "./reward.schema";
+import type { AdminProviderRewardsQuerySchema, CreateRewardSchema, FullUpdateRewardSchema, PartialUpdateRewardSchema } from "./reward.schema";
 
 /**
  * @name getAll
@@ -67,6 +67,94 @@ export const getPointShopCatalog = async (c: Context) => {
     return rows;
 };
 
+export const getAdminProviderPage = async (
+    c: Context,
+    providerId: string | undefined,
+    query: AdminProviderRewardsQuerySchema,
+) => {
+    const db = getDb(c.env.DB);
+    const offset = (query.page - 1) * query.pageSize;
+    const normalizedQuery = query.query?.trim();
+    const where = and(
+        providerId ? eq(rewards.providerId, providerId) : undefined,
+        eq(rewards.source, "POINT_SHOP"),
+        query.status ? eq(rewards.status, query.status) : undefined,
+        query.type ? eq(rewards.type, query.type) : undefined,
+        normalizedQuery ? like(rewards.name, `%${normalizedQuery}%`) : undefined,
+    );
+
+    const [items, totalRows] = await Promise.all([
+        db.query.rewards.findMany({
+            where,
+            orderBy: [desc(rewards.createdAt), asc(rewards.name)],
+            limit: query.pageSize,
+            offset,
+        }),
+        db.select({ total: count() }).from(rewards).where(where),
+    ]);
+    const total = totalRows[0]?.total ?? 0;
+
+    return {
+        items,
+        pagination: {
+            page: query.page,
+            pageSize: query.pageSize,
+            total,
+            totalPages: total === 0 ? 0 : Math.ceil(total / query.pageSize),
+        },
+    };
+};
+
+export const getAdminLeaderboardRewards = async (c: Context) => {
+    const db = getDb(c.env.DB);
+    return db
+        .select({
+            id: rewards.id,
+            providerId: rewards.providerId,
+            name: rewards.name,
+            description: rewards.description,
+            pointsRequired: rewards.pointsRequired,
+            stock: rewards.stock,
+            type: rewards.type,
+            source: rewards.source,
+            status: rewards.status,
+            leaderboardPosition: rewards.leaderboardPosition,
+            imageUrl: rewards.imageUrl,
+            validityDays: rewards.validityDays,
+            createdAt: rewards.createdAt,
+            updatedAt: rewards.updatedAt,
+            provider: {
+                id: providers.id,
+                name: providers.name,
+                logoUrl: providers.logoUrl,
+            },
+        })
+        .from(rewards)
+        .innerJoin(providers, eq(rewards.providerId, providers.id))
+        .where(and(
+            eq(rewards.source, "LEADERBOARD"),
+            eq(rewards.status, "ACTIVE"),
+        ))
+        .orderBy(asc(rewards.leaderboardPosition), asc(rewards.name));
+};
+
+export const getActiveLeaderboardRewardAtPosition = async (
+    c: Context,
+    position: number,
+    excludeRewardId?: string,
+) => {
+    const db = getDb(c.env.DB);
+    return db.query.rewards.findFirst({
+        columns: { id: true },
+        where: and(
+            eq(rewards.source, "LEADERBOARD"),
+            eq(rewards.status, "ACTIVE"),
+            eq(rewards.leaderboardPosition, position),
+            excludeRewardId ? ne(rewards.id, excludeRewardId) : undefined,
+        ),
+    });
+};
+
 /**
  * @name getById
  * @description Get reward by ID
@@ -91,7 +179,10 @@ export const getById = async (c: Context, rewardId: string) => {
  * @param {CreateRewardSchema} rewardData
  * @returns {Promise<Reward>}
  */
-export const create = async (c: Context, rewardData: CreateRewardSchema) => {
+export const create = async (
+    c: Context,
+    rewardData: CreateRewardSchema & { status?: "ACTIVE" | "INACTIVE" },
+) => {
     const db = getDb(c.env.DB);
 
     const [createdReward] = await db.insert(rewards).values(rewardData).returning();
@@ -149,6 +240,9 @@ export const remove = async (c: Context, rewardId: string) => {
 export default {
     getAll,
     getPointShopCatalog,
+    getAdminProviderPage,
+    getAdminLeaderboardRewards,
+    getActiveLeaderboardRewardAtPosition,
     getById,
     create,
     fullUpdate,

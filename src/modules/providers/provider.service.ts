@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import providerRepository from "./provider.repository";
-import type { CreateProviderSchema, FullUpdateProviderSchema, PartialUpdateProviderSchema, UpdateProviderStatusSchema } from "./provider.schema";
+import type { AdminProviderListQuerySchema, CreateProviderSchema, FullUpdateProviderSchema, PartialUpdateProviderSchema, UpdateProviderStatusSchema } from "./provider.schema";
 import { ApiError } from "../../utils/api-error";
 
 export const getAllProviders = async (c: Context) => {
@@ -15,15 +15,39 @@ export const getProviderById = async (c: Context, providerId: string) => {
     return provider;
 }
 
-export const createProvider = async (c: Context, providerData: CreateProviderSchema) => {
-    // We can infer ownerId from the authenticated user if they are registering themselves as provider
+export const getMyProvider = async (c: Context) => {
     const user = c.get("jwtPayload") as any;
+    const provider = await providerRepository.getByOwnerId(c, user.id);
+    if (!provider) throw ApiError.notFound("You have not registered a provider account");
 
-    if (user && !providerData.ownerId) {
-        providerData.ownerId = user.id;
+    return providerRepository.getAdminDetail(c, provider.id);
+}
+
+export const getAdminProviders = async (
+    c: Context,
+    query: AdminProviderListQuerySchema,
+) => providerRepository.getAdminPage(c, query);
+
+export const getAdminProviderById = async (c: Context, providerId: string) => {
+    const provider = await providerRepository.getAdminDetail(c, providerId);
+    if (!provider) throw ApiError.notFound(`Provider with ID ${providerId} not found`);
+    return provider;
+};
+
+export const createProvider = async (c: Context, providerData: CreateProviderSchema) => {
+    const user = c.get("jwtPayload") as any;
+    const ownerId = user.role === "ADMIN"
+        ? providerData.ownerId ?? user.id
+        : user.id;
+    const existingProvider = await providerRepository.getByOwnerId(c, ownerId);
+    if (existingProvider) {
+        throw ApiError.conflict("This user already has a provider account");
     }
 
-    return providerRepository.create(c, providerData);
+    return providerRepository.create(c, {
+        ...providerData,
+        ownerId,
+    });
 }
 
 export const fullUpdateProvider = async (c: Context, providerId: string, providerData: FullUpdateProviderSchema) => {
@@ -34,7 +58,14 @@ export const fullUpdateProvider = async (c: Context, providerId: string, provide
         throw ApiError.forbidden("You do not have permission to update this provider");
     }
 
-    return providerRepository.fullUpdate(c, providerId, providerData);
+    if (user.role === "ADMIN") {
+        return providerRepository.fullUpdate(c, providerId, providerData);
+    }
+    const { ownerId: _, ...ownedData } = providerData;
+    return providerRepository.partialUpdate(c, providerId, {
+        ...ownedData,
+        status: "PENDING",
+    } as PartialUpdateProviderSchema);
 }
 
 export const partialUpdateProvider = async (c: Context, providerId: string, providerData: PartialUpdateProviderSchema) => {
@@ -45,7 +76,14 @@ export const partialUpdateProvider = async (c: Context, providerId: string, prov
         throw ApiError.forbidden("You do not have permission to update this provider");
     }
 
-    return providerRepository.partialUpdate(c, providerId, providerData);
+    if (user.role === "ADMIN") {
+        return providerRepository.partialUpdate(c, providerId, providerData);
+    }
+    const { ownerId: _, ...ownedData } = providerData;
+    return providerRepository.partialUpdate(c, providerId, {
+        ...ownedData,
+        status: "PENDING",
+    } as PartialUpdateProviderSchema);
 }
 
 export const updateProviderStatus = async (c: Context, providerId: string, statusData: UpdateProviderStatusSchema) => {
@@ -63,6 +101,9 @@ export const removeProvider = async (c: Context, providerId: string) => {
 export default {
     getAllProviders,
     getProviderById,
+    getMyProvider,
+    getAdminProviders,
+    getAdminProviderById,
     createProvider,
     fullUpdateProvider,
     partialUpdateProvider,

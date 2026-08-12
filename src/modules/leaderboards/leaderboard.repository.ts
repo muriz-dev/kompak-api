@@ -144,6 +144,11 @@ export const distributeAndResetLeaderboard = async (c: Context, adminId: string,
                     expiresAt: new Date(Date.now() + reward.validityDays * 86_400_000),
                 })
             );
+            batchOps.push(
+                db.update(rewards)
+                    .set({ stock: reward.stock - 1 })
+                    .where(and(eq(rewards.id, reward.id), gt(rewards.stock, 0)))
+            );
         }
 
         // Find badge for this rank
