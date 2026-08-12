@@ -3,16 +3,21 @@ import type { Env } from "../../types";
 import { ApiError } from "../../utils/api-error";
 import { hashPassword } from "../../utils/password";
 import type { RegisterUserSchema } from "./user.schema";
+import type { UserStatus } from "../../db/schema";
 import userRepository from "./user.repository";
 import {
     httpFaceEnrollmentClient,
     type FaceEnrollmentClient,
 } from "./face-enrollment.client";
 
-type RegistrationRepository = Pick<
-    typeof userRepository,
-    "create" | "getByEmail"
->;
+type RegistrationRepository = {
+    create: (
+        c: Context,
+        data: Parameters<typeof userRepository.create>[1],
+        status?: UserStatus,
+    ) => ReturnType<typeof userRepository.create>;
+    getByEmail: typeof userRepository.getByEmail;
+};
 
 type RegistrationDependencies = {
     repository: RegistrationRepository;
@@ -25,7 +30,11 @@ export const createUserRegistration = ({
     faceEnrollment,
     hash,
 }: RegistrationDependencies) => ({
-    async register(c: Context<Env, string, any>, data: RegisterUserSchema) {
+    async register(
+        c: Context<Env, string, any>,
+        data: RegisterUserSchema,
+        status: UserStatus = "PENDING",
+    ) {
         const existingUser = await repository.getByEmail(c, data.email);
         if (existingUser) {
             throw ApiError.conflict("Email already registered");
@@ -40,7 +49,7 @@ export const createUserRegistration = ({
                 ...personalData,
                 password: passwordHash,
                 faceEmbeddingId,
-            });
+            }, status);
         } catch (error) {
             try {
                 await faceEnrollment.delete(c.env, faceEmbeddingId);

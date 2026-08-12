@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import userController from "./user.controller";
-import { paramSchema, registerUserSchema, updateStatusSchema } from "./user.schema";
+import { paramSchema, registerUserSchema, updateStatusSchema, updateUserSchema } from "./user.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { ApiResponse } from "../../utils/api-response";
 import { STATUS_CODES } from "../../constants/status-code";
@@ -41,6 +41,25 @@ router.post(
         }
     }),
     userController.register
+);
+
+router.post(
+    "/",
+    describeRoute({
+        summary: "Create Resident",
+        description: "Admin ONLY. Creates an active resident account and enrolls the supplied face image for attendance verification.",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            201: { description: "Resident created successfully" },
+            409: { description: "Email already exists" },
+            422: { description: "Resident data or face image is invalid" },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("form", registerUserSchema),
+    userController.createUserByAdmin
 );
 
 router.get(
@@ -93,6 +112,26 @@ router.patch(
     validator("param", paramSchema),
     validator("json", updateStatusSchema),
     userController.updateUserStatus
+);
+
+router.patch(
+    "/:id",
+    describeRoute({
+        summary: "Update Resident",
+        description: "Admin ONLY. Updates a resident's editable personal information.",
+        tags: ["Users"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Resident updated successfully" },
+            404: { description: "User not found" },
+            409: { description: "Email already exists" },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("param", paramSchema),
+    validator("json", updateUserSchema),
+    userController.updateUser
 );
 
 export default router;

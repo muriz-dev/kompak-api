@@ -29,27 +29,35 @@ const isPastCalendarDate = (value: string) => {
         && date.getTime() < todayUtc;
 };
 
+const nameSchema = z.string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(100, "Name must be at most 100 characters");
+
+const phoneNumberSchema = z.string()
+    .trim()
+    .transform(normalizePhoneNumber)
+    .refine(
+        (value) => /^\+628\d{7,11}$/.test(value),
+        "Enter a valid Indonesian mobile number"
+    );
+
+const emailSchema = z.email("Invalid email format")
+    .max(254, "Email must be at most 254 characters")
+    .transform((value) => value.trim().toLowerCase());
+
+const birthDateSchema = z.string()
+    .refine(isPastCalendarDate, "Birth date must be a valid past date in YYYY-MM-DD format");
+
 export const paramSchema = z.object({
     id: z.uuid("Invalid user ID"),
 });
 
 export const registerUserSchema = z.object({
-    name: z.string()
-        .trim()
-        .min(2, "Name must be at least 2 characters")
-        .max(100, "Name must be at most 100 characters"),
-    phoneNumber: z.string()
-        .trim()
-        .transform(normalizePhoneNumber)
-        .refine(
-            (value) => /^\+628\d{7,11}$/.test(value),
-            "Enter a valid Indonesian mobile number"
-        ),
-    email: z.email("Invalid email format")
-        .max(254, "Email must be at most 254 characters")
-        .transform((value) => value.trim().toLowerCase()),
-    birthDate: z.string()
-        .refine(isPastCalendarDate, "Birth date must be a valid past date in YYYY-MM-DD format"),
+    name: nameSchema,
+    phoneNumber: phoneNumberSchema,
+    email: emailSchema,
+    birthDate: birthDateSchema,
     password: z.string()
         .min(6, "Password must be at least 6 characters")
         .max(72, "Password must be at most 72 characters"),
@@ -66,8 +74,18 @@ export const registerUserSchema = z.object({
 });
 
 export const updateStatusSchema = z.object({
-    status: z.enum(["ACTIVE", "REJECTED", "PENDING"]),
+    status: z.enum(["ACTIVE", "REJECTED", "PENDING", "INACTIVE"]),
 });
+
+export const updateUserSchema = z.object({
+    name: nameSchema.optional(),
+    phoneNumber: phoneNumberSchema.optional(),
+    email: emailSchema.optional(),
+    birthDate: birthDateSchema.optional(),
+}).refine(
+    (data) => Object.values(data).some((value) => value !== undefined),
+    "At least one user field must be provided"
+);
 
 export type ParamSchema = z.infer<typeof paramSchema>;
 export type RegisterUserSchema = z.infer<typeof registerUserSchema>;
@@ -75,3 +93,4 @@ export type RegisterUserData = Omit<RegisterUserSchema, "faceImage"> & {
     faceEmbeddingId: string;
 };
 export type UpdateStatusSchema = z.infer<typeof updateStatusSchema>;
+export type UpdateUserSchema = z.infer<typeof updateUserSchema>;

@@ -132,4 +132,76 @@ describe("User Module", () => {
         expect(data.data.email).toBe("test@example.com");
         expect(data.data.faceEmbeddingId).toBeUndefined();
     });
+
+    it("should let an admin create, edit, and deactivate a resident", async () => {
+        const createRes = await app.request("/users", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${adminToken}` },
+            body: createRegistrationForm({
+                name: "Warga Kelolaan",
+                email: "managed@example.com",
+                phoneNumber: "081298765432",
+            }),
+        }, env);
+
+        expect(createRes.status).toBe(201);
+        const created = await createRes.json() as any;
+        expect(created.data.status).toBe("ACTIVE");
+        expect(created.data.password).toBeUndefined();
+        expect(created.data.faceEmbeddingId).toBeUndefined();
+
+        const updateRes = await app.request(`/users/${created.data.id}`, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${adminToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                name: "Warga Kelolaan Baru",
+                phoneNumber: "081277766655",
+            }),
+        }, env);
+
+        expect(updateRes.status).toBe(200);
+        const updated = await updateRes.json() as any;
+        expect(updated.data.name).toBe("Warga Kelolaan Baru");
+        expect(updated.data.phoneNumber).toBe("+6281277766655");
+
+        const deactivateRes = await app.request(
+            `/users/${created.data.id}/status`,
+            {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${adminToken}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ status: "INACTIVE" }),
+            },
+            env,
+        );
+
+        expect(deactivateRes.status).toBe(200);
+        const deactivated = await deactivateRes.json() as any;
+        expect(deactivated.data.status).toBe("INACTIVE");
+    });
+
+    it("should reject resident management for non-admin users", async () => {
+        const listRes = await app.request("/users", {
+            headers: { "Authorization": `Bearer ${adminToken}` },
+        }, env);
+        const list = await listRes.json() as any;
+        const citizen = list.data.find((user: any) => user.email === "test@example.com");
+        const citizenToken = await generateTestToken(citizen.id, "CITIZEN");
+
+        const updateRes = await app.request(`/users/${citizen.id}`, {
+            method: "PATCH",
+            headers: {
+                "Authorization": `Bearer ${citizenToken}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name: "Tidak Boleh" }),
+        }, env);
+
+        expect(updateRes.status).toBe(403);
+    });
 });

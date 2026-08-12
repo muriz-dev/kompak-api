@@ -1,6 +1,6 @@
 import type { Context, ValidationTargets } from "hono";
 import userService from "./user.service";
-import type { ParamSchema, RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
+import type { ParamSchema, RegisterUserSchema, UpdateStatusSchema, UpdateUserSchema } from "./user.schema";
 import { ApiResponse } from "../../utils/api-response";
 import type { Env } from "../../types";
 import { toSafeUser } from "./safe-user";
@@ -34,6 +34,13 @@ export const register = async (ctx: RegisterContext) => {
     return ApiResponse.created(ctx, "Registration successful. Please wait for admin approval.", safeUser);
 };
 
+export const createUserByAdmin = async (ctx: RegisterContext) => {
+    const data = ctx.req.valid("form");
+    const user = await userService.createUserByAdmin(ctx, data);
+
+    return ApiResponse.created(ctx, "Resident created successfully", toSafeUser(user));
+};
+
 export const getAllUsers = async (ctx: UserContext) => {
     const status = ctx.req.query("status");
     const users = await userService.getAllUsers(ctx, status);
@@ -63,9 +70,19 @@ export const updateUserStatus = async (ctx: UserContext) => {
     return ApiResponse.ok(ctx, "User status updated successfully", safeUser);
 };
 
+export const updateUser = async (ctx: UserContext) => {
+    const { id } = ctx.req.valid("param");
+    const data = ctx.req.valid("json") as UpdateUserSchema;
+    const user = await userService.updateUser(ctx, id, data);
+
+    return ApiResponse.ok(ctx, "Resident updated successfully", toSafeUser(user));
+};
+
 export default {
     register,
+    createUserByAdmin,
     getAllUsers,
     getUserById,
-    updateUserStatus
+    updateUserStatus,
+    updateUser,
 };
