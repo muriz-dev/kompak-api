@@ -23,8 +23,16 @@ export const updateProviderStatusSchema = z.object({
     status: z.enum(PROVIDER_STATUS, { message: "Status is required and must be valid" })
 });
 
+export const adminProviderListQuerySchema = z.object({
+    query: z.string().trim().max(100).optional(),
+    status: z.enum(PROVIDER_STATUS).optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(50).default(10),
+});
+
 export type ParamSchema = z.infer<typeof paramSchema>;
 export type CreateProviderSchema = z.infer<typeof createProviderSchema>;
 export type FullUpdateProviderSchema = z.infer<typeof fullUpdateProviderSchema>;
 export type PartialUpdateProviderSchema = z.infer<typeof partialUpdateProviderSchema>;
 export type UpdateProviderStatusSchema = z.infer<typeof updateProviderStatusSchema>;
+export type AdminProviderListQuerySchema = z.infer<typeof adminProviderListQuerySchema>;

@@ -1,16 +1,18 @@
 import type { Context, Env, ValidationTargets } from "hono";
 import providerService from "./provider.service";
-import type { ParamSchema, CreateProviderSchema, FullUpdateProviderSchema, PartialUpdateProviderSchema, UpdateProviderStatusSchema } from "./provider.schema";
+import type { AdminProviderListQuerySchema, ParamSchema, CreateProviderSchema, FullUpdateProviderSchema, PartialUpdateProviderSchema, UpdateProviderStatusSchema } from "./provider.schema";
 import { ApiResponse } from "../../utils/api-response";
 
 type ProviderContext = Context<Env, any, {
-    in: Pick<ValidationTargets, 'param' | 'json'> & {
+    in: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateProviderSchema | FullUpdateProviderSchema | PartialUpdateProviderSchema | UpdateProviderStatusSchema,
+        query: AdminProviderListQuerySchema,
     };
-    out: Pick<ValidationTargets, 'param' | 'json'> & {
+    out: Pick<ValidationTargets, 'param' | 'json' | 'query'> & {
         param: ParamSchema,
         json: CreateProviderSchema | FullUpdateProviderSchema | PartialUpdateProviderSchema | UpdateProviderStatusSchema,
+        query: AdminProviderListQuerySchema,
     };
 }>;
 
@@ -24,6 +26,23 @@ export const getProviderById = async (ctx: ProviderContext) => {
     const provider = await providerService.getProviderById(ctx, providerId);
     return ApiResponse.ok(ctx, "Provider retrieved successfully", provider);
 }
+
+export const getMyProvider = async (ctx: ProviderContext) => {
+    const provider = await providerService.getMyProvider(ctx);
+    return ApiResponse.ok(ctx, "Current provider retrieved successfully", provider);
+}
+
+export const getAdminProviders = async (ctx: ProviderContext) => {
+    const query = ctx.req.valid("query");
+    const providers = await providerService.getAdminProviders(ctx, query);
+    return ApiResponse.ok(ctx, "Admin providers retrieved successfully", providers);
+};
+
+export const getAdminProviderById = async (ctx: ProviderContext) => {
+    const { providerId } = ctx.req.valid("param");
+    const provider = await providerService.getAdminProviderById(ctx, providerId);
+    return ApiResponse.ok(ctx, "Admin provider detail retrieved successfully", provider);
+};
 
 export const createProvider = async (ctx: ProviderContext) => {
     const providerData = ctx.req.valid("json") as CreateProviderSchema;
@@ -61,6 +80,9 @@ export const removeProvider = async (ctx: ProviderContext) => {
 export default {
     getAllProviders,
     getProviderById,
+    getMyProvider,
+    getAdminProviders,
+    getAdminProviderById,
     createProvider,
     fullUpdateProvider,
     partialUpdateProvider,

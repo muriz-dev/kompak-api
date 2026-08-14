@@ -7,6 +7,25 @@ import { uuidv7 } from "uuidv7";
 describe("Event Module", () => {
     let adminToken: string;
     let adminId: string;
+    let citizenToken: string;
+    let draftEventId: string;
+
+    const validPayload = (overrides: Record<string, unknown> = {}) => {
+        const attendanceStartTime = new Date(Date.now() - 7200000);
+
+        return {
+            title: "Test Event",
+            description: "A test event with radius",
+            eventDate: attendanceStartTime.toISOString(),
+            attendanceStartTime: attendanceStartTime.toISOString(),
+            attendanceEndTime: new Date(attendanceStartTime.getTime() + 3600000).toISOString(),
+            rewardPoints: 100,
+            latitude: -6.200000,
+            longitude: 106.816666,
+            radiusMeters: 50,
+            ...overrides,
+        };
+    };
     
     beforeAll(async () => {
         await applyMigrations();
@@ -21,20 +40,20 @@ describe("Event Module", () => {
             birthDate: new Date().toISOString()
         });
         adminToken = await generateTestToken(adminId, "ADMIN");
+
+        const citizenId = uuidv7();
+        await db.insert(users).values({
+            id: citizenId, name: "Citizen", email: "citizen@test.com", password: "pwd",
+            faceEmbeddingId: "citizen", phoneNumber: "011", role: "CITIZEN", status: "ACTIVE",
+            birthDate: new Date().toISOString()
+        });
+        citizenToken = await generateTestToken(citizenId, "CITIZEN");
     });
 
     it("should create an event successfully", async () => {
-        const payload = {
-            title: "Test Event",
-            description: "A test event with radius",
-            eventDate: new Date().toISOString(),
-            attendanceStartTime: new Date().toISOString(),
-            attendanceEndTime: new Date(Date.now() + 3600000).toISOString(),
-            rewardPoints: 100,
-            latitude: -6.200000,
-            longitude: 106.816666,
-            radiusMeters: 50
-        };
+        const payload = validPayload({
+            bannerUrl: "https://assets.kompak.test/events/banner.jpg",
+        });
 
         const res = await app.request("/events", {
             method: "POST",
@@ -54,17 +73,348 @@ describe("Event Module", () => {
         expect(data.data.title).toBe("Test Event");
         expect(data.data.rewardPoints).toBe(100);
         expect(data.data.radiusMeters).toBe(50);
+        expect(data.data.bannerUrl).toBe("https://assets.kompak.test/events/banner.jpg");
+        expect(data.data.status).toBe("DRAFT");
+        draftEventId = data.data.id;
     });
 
-    it("should retrieve a list of events", async () => {
+    it.each([
+        ["latitude below -90", { latitude: -90.1 }],
+        ["latitude above 90", { latitude: 90.1 }],
+        ["longitude below -180", { longitude: -180.1 }],
+        ["longitude above 180", { longitude: 180.1 }],
+    ])("should reject %s", async (_name, overrides) => {
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload(overrides)),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should reject an attendance window that ends before it starts", async () => {
+        const attendanceStartTime = new Date(Date.now() + 7200000);
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({
+                attendanceStartTime: attendanceStartTime.toISOString(),
+                attendanceEndTime: new Date(attendanceStartTime.getTime() - 60000).toISOString(),
+            })),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should reject a terminal status during creation", async () => {
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({ status: "CANCELLED" })),
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should create a draft by default and allow it to be published", async () => {
+        const createResponse = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify(validPayload({ title: "Draft to publish" })),
+        }, env);
+        const created = await createResponse.json() as any;
+
+        expect(createResponse.status).toBe(201);
+        expect(created.data.status).toBe("DRAFT");
+
+        const publishResponse = await app.request(`/events/${created.data.id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({ status: "PUBLISHED" }),
+        }, env);
+        const published = await publishResponse.json() as any;
+
+        expect(publishResponse.status).toBe(200);
+        expect(published.data.status).toBe("PUBLISHED");
+
+        const invalidWindowResponse = await app.request(`/events/${created.data.id}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`,
+            },
+            body: JSON.stringify({
+                attendanceStartTime: new Date(Date.now() + 86400000).toISOString(),
+            }),
+        }, env);
+
+        expect(invalidWindowResponse.status).toBe(422);
+    });
+
+    it("should hide draft events from the public event list", async () => {
         const res = await app.request("/events", undefined, env);
         expect(res.status).toBe(200);
         const data = await res.json() as any;
+        expect(data.data.every((event: any) => event.status === "PUBLISHED")).toBe(true);
+        expect(data.data.some((event: any) => event.title === "Test Event")).toBe(false);
+    });
+
+    it("should require an admin session for the management event list", async () => {
+        const unauthenticated = await app.request("/events/admin", undefined, env);
+        expect(unauthenticated.status).toBe(401);
+
+        const forbidden = await app.request("/events/admin", {
+            headers: { "Authorization": `Bearer ${citizenToken}` }
+        }, env);
+        expect(forbidden.status).toBe(403);
+    });
+
+    it("should retrieve draft events for an admin", async () => {
+        const res = await app.request("/events/admin?status=DRAFT", {
+            headers: { "Authorization": `Bearer ${adminToken}` }
+        }, env);
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
         expect(data.data.length).toBeGreaterThan(0);
-        expect(data.data[0].title).toBe("Test Event");
+        expect(data.data.every((event: any) => event.status === "DRAFT")).toBe(true);
+        expect(data.data.some((event: any) => event.title === "Test Event")).toBe(true);
+    });
+
+    it("should expose event details in any lifecycle state only to admins", async () => {
+        const unauthenticated = await app.request(`/events/admin/${draftEventId}`, undefined, env);
+        expect(unauthenticated.status).toBe(401);
+
+        const forbidden = await app.request(`/events/admin/${draftEventId}`, {
+            headers: { "Authorization": `Bearer ${citizenToken}` }
+        }, env);
+        expect(forbidden.status).toBe(403);
+
+        const res = await app.request(`/events/admin/${draftEventId}`, {
+            headers: { "Authorization": `Bearer ${adminToken}` }
+        }, env);
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.data.id).toBe(draftEventId);
+        expect(data.data.status).toBe("DRAFT");
+    });
+
+    it("should create a published event with its banner URL", async () => {
+        const bannerUrl = "https://kompak-api.test/storage/events/banner.png";
+        const start = new Date(Date.now() + 86400000);
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                title: "Published Community Event",
+                description: "Visible immediately after creation",
+                eventDate: start.toISOString(),
+                attendanceStartTime: start.toISOString(),
+                attendanceEndTime: new Date(start.getTime() + 3600000).toISOString(),
+                rewardPoints: 25,
+                latitude: -6.2,
+                longitude: 106.816666,
+                radiusMeters: 75,
+                status: "PUBLISHED",
+                bannerUrl,
+            })
+        }, env);
+
+        expect(res.status).toBe(201);
+        const data = await res.json() as any;
+        expect(data.data.status).toBe("PUBLISHED");
+        expect(data.data.bannerUrl).toBe(bannerUrl);
+
+        const publicResponse = await app.request("/events", undefined, env);
+        const publicData = await publicResponse.json() as any;
+        expect(
+            publicData.data.some((event: any) =>
+                event.id === data.data.id && event.bannerUrl === bannerUrl
+            )
+        ).toBe(true);
+    });
+
+    it("should reject invalid event schedules and coordinates", async () => {
+        const start = new Date(Date.now() + 86400000);
+        const res = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                title: "Invalid Event",
+                description: "Invalid schedule and coordinates",
+                eventDate: start.toISOString(),
+                attendanceStartTime: start.toISOString(),
+                attendanceEndTime: start.toISOString(),
+                rewardPoints: 10,
+                latitude: 91,
+                longitude: 181,
+            })
+        }, env);
+
+        expect(res.status).toBe(400);
+    });
+
+    it("should validate uploads and reserve event images for admins", async () => {
+        const forbidden = await app.request("/storage/upload-url", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${citizenToken}`
+            },
+            body: JSON.stringify({
+                folder: "events",
+                contentType: "image/png",
+                contentLength: 1024,
+            })
+        }, env);
+        expect(forbidden.status).toBe(403);
+
+        const invalidType = await app.request("/storage/upload-url", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                folder: "events",
+                contentType: "application/pdf",
+                contentLength: 1024,
+            })
+        }, env);
+        expect(invalidType.status).toBe(400);
+
+        const tooLarge = await app.request("/storage/upload-url", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                folder: "events",
+                contentType: "image/jpeg",
+                contentLength: 5 * 1024 * 1024 + 1,
+            })
+        }, env);
+        expect(tooLarge.status).toBe(400);
+    });
+
+    it("should let an admin publish a draft event", async () => {
+        const res = await app.request(`/events/${draftEventId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ status: "PUBLISHED" })
+        }, env);
+
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.data.status).toBe("PUBLISHED");
+    });
+
+    it("should reject invalid event status transitions", async () => {
+        const res = await app.request(`/events/${draftEventId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ status: "DRAFT" })
+        }, env);
+
+        expect(res.status).toBe(400);
+        const data = await res.json() as any;
+        expect(data.message).toBe("Cannot update event status from PUBLISHED to DRAFT");
+    });
+
+    it("should let an admin close a published event", async () => {
+        const res = await app.request(`/events/${draftEventId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ status: "CLOSED" })
+        }, env);
+
+        expect(res.status).toBe(200);
+        const data = await res.json() as any;
+        expect(data.data.status).toBe("CLOSED");
+
+        const publicDetail = await app.request(`/events/${draftEventId}`, undefined, env);
+        expect(publicDetail.status).toBe(200);
+    });
+
+    it("should let an admin cancel a published event", async () => {
+        const createResponse = await app.request("/events", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({
+                title: "Event to Cancel",
+                description: "An event used to verify cancellation",
+                eventDate: new Date(Date.now() + 86400000).toISOString(),
+                attendanceStartTime: new Date(Date.now() + 86400000).toISOString(),
+                attendanceEndTime: new Date(Date.now() + 90000000).toISOString(),
+                rewardPoints: 10,
+                latitude: -6.2,
+                longitude: 106.8
+            })
+        }, env);
+        const created = await createResponse.json() as any;
+        const eventId = created.data.id;
+
+        await app.request(`/events/${eventId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ status: "PUBLISHED" })
+        }, env);
+
+        const cancelResponse = await app.request(`/events/${eventId}`, {
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ status: "CANCELLED" })
+        }, env);
+
+        expect(cancelResponse.status).toBe(200);
+        const cancelled = await cancelResponse.json() as any;
+        expect(cancelled.data.status).toBe("CANCELLED");
     });
 
     describe("Event Filtering by Timeframe", () => {
+        let publishedEventId: string;
+        let hiddenDraftEventId: string;
+
         beforeAll(async () => {
             const { drizzle } = await import("drizzle-orm/d1");
             const { events } = await import("../../db/schema");
@@ -73,14 +423,29 @@ describe("Event Module", () => {
             const now = Date.now();
             
             // Upcoming Event (Published, starts in 1 day)
+            publishedEventId = uuidv7();
             await db.insert(events).values({
-                id: uuidv7(),
+                id: publishedEventId,
                 createdBy: adminId,
                 title: "Upcoming Event",
                 description: "Starts tomorrow",
                 eventDate: new Date(now + 86400000),
                 attendanceStartTime: new Date(now + 86400000),
                 attendanceEndTime: new Date(now + 90000000),
+                rewardPoints: 10,
+                latitude: 0,
+                longitude: 0,
+                status: "PUBLISHED"
+            });
+
+            await db.insert(events).values({
+                id: uuidv7(),
+                createdBy: adminId,
+                title: "Far Upcoming Event",
+                description: "Starts after the nearer event",
+                eventDate: new Date(now + 259200000),
+                attendanceStartTime: new Date(now + 259200000),
+                attendanceEndTime: new Date(now + 262800000),
                 rewardPoints: 10,
                 latitude: 0,
                 longitude: 0,
@@ -103,8 +468,9 @@ describe("Event Module", () => {
             });
             
             // Draft Event (Starts tomorrow but not published)
+            hiddenDraftEventId = uuidv7();
             await db.insert(events).values({
-                id: uuidv7(),
+                id: hiddenDraftEventId,
                 createdBy: adminId,
                 title: "Draft Event",
                 description: "Not published",
@@ -122,8 +488,14 @@ describe("Event Module", () => {
             const res = await app.request("/events?timeframe=upcoming", undefined, env);
             expect(res.status).toBe(200);
             const data = await res.json() as any;
-            expect(data.data.length).toBe(1);
-            expect(data.data[0].title).toBe("Upcoming Event");
+            expect(data.data.some((event: any) => event.title === "Upcoming Event")).toBe(true);
+            expect(data.data.some((event: any) => event.title === "Draft Event")).toBe(false);
+            expect(data.data.every((event: any) => event.status === "PUBLISHED")).toBe(true);
+            expect(
+                data.data.findIndex((event: any) => event.title === "Upcoming Event")
+            ).toBeLessThan(
+                data.data.findIndex((event: any) => event.title === "Far Upcoming Event")
+            );
         });
 
         it("should retrieve only ongoing events when timeframe=ongoing", async () => {
@@ -132,6 +504,27 @@ describe("Event Module", () => {
             const data = await res.json() as any;
             expect(data.data.length).toBe(1);
             expect(data.data[0].title).toBe("Ongoing Event");
+        });
+
+        it("should keep drafts out of the unfiltered public list", async () => {
+            const res = await app.request("/events", undefined, env);
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.data.every((event: any) => event.status === "PUBLISHED")).toBe(true);
+            expect(data.data.some((event: any) => event.title === "Draft Event")).toBe(false);
+        });
+
+        it("should retrieve a published event by ID", async () => {
+            const res = await app.request(`/events/${publishedEventId}`, undefined, env);
+            expect(res.status).toBe(200);
+            const data = await res.json() as any;
+            expect(data.data.id).toBe(publishedEventId);
+            expect(data.data.status).toBe("PUBLISHED");
+        });
+
+        it("should not expose a draft event by ID", async () => {
+            const res = await app.request(`/events/${hiddenDraftEventId}`, undefined, env);
+            expect(res.status).toBe(404);
         });
     });
 });

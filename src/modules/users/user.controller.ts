@@ -1,7 +1,18 @@
-import type { Context, Env, ValidationTargets } from "hono";
+import type { Context, ValidationTargets } from "hono";
 import userService from "./user.service";
-import type { ParamSchema, RegisterUserSchema, UpdateStatusSchema } from "./user.schema";
+import type { ParamSchema, RegisterUserSchema, UpdateStatusSchema, UpdateUserSchema } from "./user.schema";
 import { ApiResponse } from "../../utils/api-response";
+import type { Env } from "../../types";
+import { toSafeUser } from "./safe-user";
+
+type RegisterContext = Context<Env, string, {
+    in: Pick<ValidationTargets, 'form'> & {
+        form: RegisterUserSchema
+    };
+    out: Pick<ValidationTargets, 'form'> & {
+        form: RegisterUserSchema
+    };
+}>;
 
 type UserContext = Context<Env, any, {
     in: Pick<ValidationTargets, 'param' | 'json'> & {
@@ -14,22 +25,27 @@ type UserContext = Context<Env, any, {
     };
 }>;
 
-export const register = async (ctx: UserContext) => {
-    const data = ctx.req.valid("json");
+export const register = async (ctx: RegisterContext) => {
+    const data = ctx.req.valid("form");
     const user = await userService.register(ctx, data);
-    
-    // Hapus password dari response
-    const { password, ...safeUser } = user;
-    
+
+    const safeUser = toSafeUser(user);
+
     return ApiResponse.created(ctx, "Registration successful. Please wait for admin approval.", safeUser);
+};
+
+export const createUserByAdmin = async (ctx: RegisterContext) => {
+    const data = ctx.req.valid("form");
+    const user = await userService.createUserByAdmin(ctx, data);
+
+    return ApiResponse.created(ctx, "Resident created successfully", toSafeUser(user));
 };
 
 export const getAllUsers = async (ctx: UserContext) => {
     const status = ctx.req.query("status");
     const users = await userService.getAllUsers(ctx, status);
     
-    // Hapus password dari seluruh array
-    const safeUsers = users.map(({ password, ...user }) => user);
+    const safeUsers = users.map(toSafeUser);
     
     return ApiResponse.ok(ctx, "Users retrieved successfully", safeUsers);
 };
@@ -38,7 +54,7 @@ export const getUserById = async (ctx: UserContext) => {
     const { id } = ctx.req.valid("param");
     const user = await userService.getUserById(ctx, id);
     
-    const { password, ...safeUser } = user;
+    const safeUser = toSafeUser(user);
     
     return ApiResponse.ok(ctx, "User retrieved successfully", safeUser);
 };
@@ -49,14 +65,24 @@ export const updateUserStatus = async (ctx: UserContext) => {
     
     const user = await userService.updateUserStatus(ctx, id, data);
     
-    const { password, ...safeUser } = user;
+    const safeUser = toSafeUser(user);
     
     return ApiResponse.ok(ctx, "User status updated successfully", safeUser);
 };
 
+export const updateUser = async (ctx: UserContext) => {
+    const { id } = ctx.req.valid("param");
+    const data = ctx.req.valid("json") as UpdateUserSchema;
+    const user = await userService.updateUser(ctx, id, data);
+
+    return ApiResponse.ok(ctx, "Resident updated successfully", toSafeUser(user));
+};
+
 export default {
     register,
+    createUserByAdmin,
     getAllUsers,
     getUserById,
-    updateUserStatus
+    updateUserStatus,
+    updateUser,
 };

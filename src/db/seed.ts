@@ -23,6 +23,7 @@ let sql = `-- Kompak API Database Seed
 -- 0. Clear existing data
 DELETE FROM "notifications";
 DELETE FROM "announcements";
+DELETE FROM "leaderboard_distributions";
 DELETE FROM "badge_awards";
 DELETE FROM "badge_definitions";
 DELETE FROM "reward_redemptions";
@@ -97,9 +98,9 @@ sql += `INSERT INTO "event_transactions" (id, user_id, attendance_id, event_id, 
 
 // 7. Reward Redemptions
 sql += `\n-- 7. Reward Redemptions\n`;
-sql += `INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, status, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 150, 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 500, 'PENDING', ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});\n`;
+sql += `INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, idempotency_key, status, completed_at, expires_at, created_at, updated_at) VALUES
+(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 150, 'seed-redemption-completed', 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 3)}, ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
+(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 500, 'seed-redemption-pending', 'PENDING', NULL, ${now() + (oneDayMs * 5)}, ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});\n`;
 
 // 8. Badge Definitions
 sql += `\n-- 8. Badge Definitions\n`;

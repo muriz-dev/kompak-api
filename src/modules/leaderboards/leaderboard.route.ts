@@ -10,12 +10,15 @@ router.get(
     "/",
     describeRoute({
         summary: "Get Leaderboard",
-        description: "Fetches the community leaderboard ranking. Ranks are strictly based on the `leaderboardPoints` of each citizen (descending). You can filter by passing `?period=YYYY-MM` (e.g. 2026-08).",
+        description: "Fetches the current community leaderboard for active citizens with more than zero points, including totals, configured Top-3 rewards, and the authenticated citizen's rank when eligible.",
         tags: ["Leaderboards"],
+        security: [{ bearerAuth: [] }],
         responses: {
             200: { description: "Leaderboard retrieved successfully" },
+            401: { description: "Unauthorized" },
         },
     }),
+    requireAuth,
     validator("query", getLeaderboardQuerySchema),
     leaderboardController.getLeaderboard
 );
@@ -30,6 +33,7 @@ router.post(
         responses: {
             200: { description: "Distribution successful" },
             400: { description: "Invalid period" },
+            409: { description: "Period has already been distributed" },
             403: { description: "Forbidden" },
         },
     }),

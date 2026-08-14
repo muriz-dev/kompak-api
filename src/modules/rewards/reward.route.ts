@@ -1,10 +1,25 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as rewardController from "./reward.controller";
-import { paramSchema, querySchema, createRewardSchema, fullUpdateRewardSchema, partialUpdateRewardSchema } from "./reward.schema";
+import { adminProviderRewardsQuerySchema, paramSchema, providerParamSchema, querySchema, createRewardSchema, fullUpdateRewardSchema, partialUpdateRewardSchema } from "./reward.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const rewardRouter = new Hono();
+
+rewardRouter.get(
+    "/point-shop",
+    describeRoute({
+        summary: "Get Point Shop Catalog",
+        description: "Returns in-stock active Point Shop rewards from verified providers, including pickup information required by the resident app.",
+        tags: ["Rewards"],
+        responses: {
+            200: {
+                description: "Point Shop catalog retrieved successfully",
+            },
+        },
+    }),
+    rewardController.getPointShopCatalog,
+);
 
 rewardRouter.get(
     "/",
@@ -20,6 +35,79 @@ rewardRouter.get(
     }),
     validator("query", querySchema),
     rewardController.getAllRewards,
+);
+
+rewardRouter.get(
+    "/admin/providers/:providerId",
+    describeRoute({
+        summary: "Get Provider Point Shop Products",
+        description: "Admin ONLY. Returns a searchable and paginated provider product catalog. Filter by ACTIVE for products currently listed in Point Shop or INACTIVE for products eligible to be added.",
+        tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Provider products retrieved successfully" },
+            403: { description: "Admin access required" },
+            404: { description: "Provider not found" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    validator("param", providerParamSchema),
+    validator("query", adminProviderRewardsQuerySchema),
+    rewardController.getAdminProviderRewards,
+);
+
+rewardRouter.get(
+    "/admin/point-shop",
+    describeRoute({
+        summary: "Get Admin Point Shop Products",
+        description: "Admin ONLY. Returns the global Point Shop product catalog. ACTIVE products are currently visible to residents; INACTIVE products are eligible to be added.",
+        tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Point Shop products retrieved successfully" },
+            403: { description: "Admin access required" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    validator("query", adminProviderRewardsQuerySchema),
+    rewardController.getAdminPointShopRewards,
+);
+
+rewardRouter.get(
+    "/admin/leaderboard",
+    describeRoute({
+        summary: "Get Leaderboard Prize Configuration",
+        description: "Admin ONLY. Returns the active rewards configured for leaderboard positions 1 through 3, including provider identity.",
+        tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Leaderboard rewards retrieved successfully" },
+            403: { description: "Admin access required" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    rewardController.getAdminLeaderboardRewards,
+);
+
+rewardRouter.get(
+    "/provider/me",
+    describeRoute({
+        summary: "Get Current Provider Products",
+        description: "Returns the authenticated provider owner's searchable and paginated Point Shop products, including products awaiting admin activation.",
+        tags: ["Rewards"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Current provider products retrieved successfully" },
+            404: { description: "The current user has not registered a provider" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN", "CITIZEN"]),
+    validator("query", adminProviderRewardsQuerySchema),
+    rewardController.getMyProviderRewards,
 );
 
 rewardRouter.get(

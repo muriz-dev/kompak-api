@@ -39,6 +39,7 @@ export const PROVIDER_STATUS = [
     "PENDING",
     "VERIFIED",
     "REJECTED",
+    "INACTIVE",
 ] as const;
 export type ProviderStatus = (typeof PROVIDER_STATUS)[number];
 
@@ -197,6 +198,10 @@ export const rewards = sqliteTable("rewards", {
 
     name: text("name").notNull(),
 
+    description: text("description")
+        .notNull()
+        .default(""),
+
     pointsRequired: integer("points_required")
         .notNull()
         .default(0),
@@ -204,6 +209,16 @@ export const rewards = sqliteTable("rewards", {
     stock: integer("stock")
         .notNull()
         .default(0),
+
+    isFeatured: integer("is_featured", {
+        mode: "boolean",
+    })
+        .notNull()
+        .default(false),
+
+    validityDays: integer("validity_days")
+        .notNull()
+        .default(7),
 
     type: text("type", {
         enum: REWARD_TYPE,
@@ -386,6 +401,8 @@ export const rewardRedemptions = sqliteTable(
 
         pointsSpent: integer("points_spent").notNull(),
 
+        idempotencyKey: text("idempotency_key").notNull(),
+
         status: text("status", {
             enum: REDEMPTION_STATUS,
         })
@@ -396,6 +413,10 @@ export const rewardRedemptions = sqliteTable(
             mode: "timestamp_ms",
         }),
 
+        expiresAt: integer("expires_at", {
+            mode: "timestamp_ms",
+        }).notNull(),
+
         createdAt: integer("created_at", {
             mode: "timestamp_ms",
         }).default(sql`(unixepoch() * 1000)`),
@@ -405,7 +426,13 @@ export const rewardRedemptions = sqliteTable(
         })
             .default(sql`(unixepoch() * 1000)`)
             .$onUpdate(() => new Date()),
-    }
+    },
+    (table) => [
+        uniqueIndex("reward_redemption_user_idempotency_unique").on(
+            table.userId,
+            table.idempotencyKey,
+        ),
+    ]
 );
 
 export const badgeDefinitions = sqliteTable("badge_definitions", {
@@ -460,6 +487,22 @@ export const badgeAwards = sqliteTable("badge_awards", {
     awardedBy: text("awarded_by").references(() => users.id),
 
     awardedAt: integer("awarded_at", {
+        mode: "timestamp_ms",
+    }).default(sql`(unixepoch() * 1000)`),
+});
+
+export const leaderboardDistributions = sqliteTable("leaderboard_distributions", {
+    id: text("id")
+        .primaryKey()
+        .$defaultFn(() => uuidv7()),
+
+    period: text("period").notNull().unique(),
+
+    distributedBy: text("distributed_by")
+        .references(() => users.id)
+        .notNull(),
+
+    distributedAt: integer("distributed_at", {
         mode: "timestamp_ms",
     }).default(sql`(unixepoch() * 1000)`),
 });

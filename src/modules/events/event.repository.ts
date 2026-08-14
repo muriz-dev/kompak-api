@@ -1,7 +1,7 @@
 import type { Context } from "hono";
-import { eq, and, gt, gte, lte } from "drizzle-orm";
+import { eq, and, asc, desc, gt, gte, inArray, lte } from "drizzle-orm";
 import { getDb } from "../../db/connection";
-import { events } from "../../db/schema";
+import { events, eventTransactions } from "../../db/schema";
 import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema } from "../events/event.schema";
 
 /**
@@ -12,29 +12,50 @@ import type { CreateEventSchema, FullUpdateEventSchema, PartialUpdateEventSchema
  */
 export const getAll = async (c: Context, timeframe?: "upcoming" | "ongoing") => {
     const db = getDb(c.env.DB);
-    
-    let whereClause = undefined;
     const now = new Date();
 
-    if (timeframe === "upcoming") {
-        whereClause = and(
+    const whereClause = timeframe === "upcoming"
+        ? and(
             eq(events.status, "PUBLISHED"),
             gt(events.attendanceStartTime, now)
-        );
-    } else if (timeframe === "ongoing") {
-        whereClause = and(
+        )
+        : timeframe === "ongoing"
+        ? and(
             eq(events.status, "PUBLISHED"),
             lte(events.attendanceStartTime, now),
             gte(events.attendanceEndTime, now)
-        );
-    }
+        )
+        : eq(events.status, "PUBLISHED");
+
+    const orderBy = timeframe === "upcoming"
+        ? [asc(events.attendanceStartTime)]
+        : timeframe === "ongoing"
+        ? [asc(events.attendanceEndTime)]
+        : [desc(events.eventDate)];
 
     const eventsData = await db.query.events.findMany({
         where: whereClause,
+        orderBy,
     });
 
     return eventsData;
 }
+
+/**
+ * @name getAllAdmin
+ * @description Get every event for the admin management surface
+ */
+export const getAllAdmin = async (
+    c: Context,
+    status?: "DRAFT" | "PUBLISHED" | "CLOSED" | "CANCELLED"
+) => {
+    const db = getDb(c.env.DB);
+
+    return db.query.events.findMany({
+        where: status ? eq(events.status, status) : undefined,
+        orderBy: [desc(events.createdAt)],
+    });
+};
 
 /**
  * @name getById
@@ -51,6 +72,21 @@ export const getById = async (c: Context, eventId: string) => {
     });
 
     return event;
+}
+
+/**
+ * @name getPublicById
+ * @description Get a resident-visible event without exposing drafts or cancellations
+ */
+export const getPublicById = async (c: Context, eventId: string) => {
+    const db = getDb(c.env.DB);
+
+    return db.query.events.findFirst({
+        where: and(
+            eq(events.id, eventId),
+            inArray(events.status, ["PUBLISHED", "CLOSED"]),
+        ),
+    });
 }
 
 /**
@@ -114,14 +150,20 @@ export const partialUpdate = async (c: Context, eventId: string, eventData: Part
 export const remove = async (c: Context, eventId: string) => {
     const db = getDb(c.env.DB);
 
-    const [deletedEvent] = await db.delete(events).where(eq(events.id, eventId)).returning();
+    const [, deletedEvents] = await db.batch([
+        db.delete(eventTransactions).where(eq(eventTransactions.eventId, eventId)),
+        db.delete(events).where(eq(events.id, eventId)).returning(),
+    ]);
+    const [deletedEvent] = deletedEvents;
 
     return deletedEvent;
 }
 
 export default {
     getAll,
+    getAllAdmin,
     getById,
+    getPublicById,
     create,
     fullUpdate,
     partialUpdate,

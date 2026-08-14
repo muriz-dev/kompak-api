@@ -32,6 +32,7 @@ describe("Reward Redemptions Module", () => {
         await db.insert(users).values({
             id: adminId, name: "Admin", email: "admin@test.com", password: "pwd",
             faceEmbeddingId: "face", phoneNumber: "081", role: "ADMIN",
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         
@@ -40,6 +41,7 @@ describe("Reward Redemptions Module", () => {
             id: userId, name: "User", email: "user@test.com", password: "pwd",
             faceEmbeddingId: "face2", phoneNumber: "082", role: "CITIZEN",
             balance: 500,
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         
@@ -47,6 +49,7 @@ describe("Reward Redemptions Module", () => {
         await db.insert(users).values({
             id: providerUserId, name: "Provider", email: "prov@test.com", password: "pwd",
             faceEmbeddingId: "face3", phoneNumber: "083", role: "CITIZEN",
+            status: "ACTIVE",
             birthDate: new Date().toISOString()
         });
         
@@ -87,7 +90,7 @@ describe("Reward Redemptions Module", () => {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${userToken}`
             },
-            body: JSON.stringify({ rewardId })
+            body: JSON.stringify({ rewardId, idempotencyKey: "redeem-test-reward-1" })
         }, env);
 
         expect(res.status).toBe(201);
@@ -97,6 +100,31 @@ describe("Reward Redemptions Module", () => {
         expect(data.data.status).toBe("PENDING");
         
         redemptionId = data.data.id;
+    });
+
+    it("should return the same redemption for an idempotent retry", async () => {
+        const res = await app.request("/reward-redemptions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
+            body: JSON.stringify({ rewardId, idempotencyKey: "redeem-test-reward-1" })
+        }, env);
+
+        expect(res.status).toBe(201);
+        const data = await res.json() as any;
+        expect(data.data.id).toBe(redemptionId);
+        expect(data.data.balance).toBe(400);
+
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { users, rewards } = await import("../../db/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = drizzle(env.DB);
+        const user = await db.select().from(users).where(eq(users.id, userId)).get();
+        const reward = await db.select().from(rewards).where(eq(rewards.id, rewardId)).get();
+        expect(user?.balance).toBe(400);
+        expect(reward?.stock).toBe(9);
     });
     
     it("should fail redemption if insufficient points", async () => {
@@ -122,7 +150,7 @@ describe("Reward Redemptions Module", () => {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${userToken}`
             },
-            body: JSON.stringify({ rewardId: expRewardId })
+            body: JSON.stringify({ rewardId: expRewardId, idempotencyKey: "redeem-expensive-1" })
         }, env);
 
         expect(res.status).toBe(400);
@@ -163,7 +191,7 @@ describe("Reward Redemptions Module", () => {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${userToken}`
             },
-            body: JSON.stringify({ rewardId })
+            body: JSON.stringify({ rewardId, idempotencyKey: "redeem-test-reward-2" })
         }, env);
         const redemptData = await res.json() as any;
         const newRedemptId = redemptData.data.id;
@@ -178,9 +206,41 @@ describe("Reward Redemptions Module", () => {
             body: JSON.stringify({ status: "REJECTED" })
         }, env);
         expect(res.status).toBe(200);
-        
-        // Wait, to verify the refund, we should check user's balance.
-        // But we don't have a direct /users/me endpoint test here.
-        // Assuming the repository code is executed and doesn't throw.
+
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { users, rewards } = await import("../../db/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = drizzle(env.DB);
+        const user = await db.select().from(users).where(eq(users.id, userId)).get();
+        const reward = await db.select().from(rewards).where(eq(rewards.id, rewardId)).get();
+        expect(user?.balance).toBe(400);
+        expect(reward?.stock).toBe(9);
+    });
+
+    it("should complete a pending redemption with its signed claim token", async () => {
+        const createRes = await app.request("/reward-redemptions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${userToken}`
+            },
+            body: JSON.stringify({ rewardId, idempotencyKey: "redeem-test-reward-claim" })
+        }, env);
+        expect(createRes.status).toBe(201);
+        const created = await createRes.json() as any;
+        expect(created.data.claimToken).toEqual(expect.any(String));
+
+        const claimRes = await app.request("/reward-redemptions/claim", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${providerToken}`
+            },
+            body: JSON.stringify({ claimToken: created.data.claimToken })
+        }, env);
+        expect(claimRes.status).toBe(200);
+        const claimed = await claimRes.json() as any;
+        expect(claimed.data.status).toBe("COMPLETED");
+        expect(claimed.data.claimToken).toBeNull();
     });
 });

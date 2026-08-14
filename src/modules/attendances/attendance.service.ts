@@ -3,6 +3,7 @@ import attendanceRepository from "./attendance.repository";
 import { ApiError } from "../../utils/api-error";
 import { calculateDistance } from "../../utils/geolocation";
 import type { CreateAttendanceInput } from "./attendance.schema";
+import { httpFaceEnrollmentClient } from "../users/face-enrollment.client";
 
 export const recordAttendance = async (c: Context, data: CreateAttendanceInput) => {
     const event = await attendanceRepository.getEvent(c, data.eventId);
@@ -65,6 +66,14 @@ export const recordAttendance = async (c: Context, data: CreateAttendanceInput) 
 
     if (existingAttendance) {
         throw new ApiError(409, "User has already attended this event");
+    }
+
+    const faceResult = await httpFaceEnrollmentClient.search(c.env, data.faceImage);
+    if (!faceResult.matched || faceResult.faceId !== user.faceEmbeddingId) {
+        throw ApiError.validation("Face could not be verified", {
+            faceImage: "Your face does not match the registered identity. Please try again.",
+            faceCode: "face_mismatch",
+        });
     }
 
     // Database Transaction

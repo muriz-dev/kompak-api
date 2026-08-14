@@ -51,3 +51,10 @@ export const updateRedemptionStatus = async (c: Context) => {
 
     return ApiResponse.ok(c, "Reward redemption status updated successfully", data);
 };
+
+export const claimRedemption = async (c: Context) => {
+    const payload = c.req.valid("json" as never) as any;
+    const data = await rewardRedemptionService.claimRedemption(c, payload);
+
+    return ApiResponse.ok(c, "Reward redemption completed successfully", data);
+};

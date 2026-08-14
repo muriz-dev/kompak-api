@@ -6,7 +6,10 @@ import { uuidv7 } from "uuidv7";
 
 describe("Leaderboard Module", () => {
     let adminToken: string;
+    let citizenToken: string;
+    let zeroPointToken: string;
     let u1: string, u2: string, u3: string, u4: string;
+    let rankOneRewardId: string, rankTwoRewardId: string;
 
     beforeAll(async () => {
         await applyMigrations();
@@ -20,6 +23,7 @@ describe("Leaderboard Module", () => {
         await db.insert(users).values({
             id: adminId, name: "LB Admin", email: "lbadmin@test.com", password: "pwd",
             faceEmbeddingId: "lb-admin", phoneNumber: "010", role: "ADMIN", status: "ACTIVE",
+            leaderboardPoints: 9999,
             birthDate: new Date().toISOString()
         });
         adminToken = await generateTestToken(adminId, "ADMIN");
@@ -48,6 +52,16 @@ describe("Leaderboard Module", () => {
         u2 = await createCitizen("User2", 300); // Rank 2
         u3 = await createCitizen("User3", 100); // Rank 3
         u4 = await createCitizen("User4", 50);  // Rank 4
+        citizenToken = await generateTestToken(u4, "CITIZEN");
+        const zeroPointUserId = await createCitizen("ZeroPointUser", 0);
+        zeroPointToken = await generateTestToken(zeroPointUserId, "CITIZEN");
+
+        await db.insert(users).values({
+            id: uuidv7(), name: "Inactive User", email: "inactive@test.com", password: "pwd",
+            faceEmbeddingId: "lb-inactive", phoneNumber: "012", role: "CITIZEN", status: "INACTIVE",
+            balance: 1000, leaderboardPoints: 800,
+            birthDate: new Date().toISOString()
+        });
 
         // 3. Create Leaderboard Badges
         await db.insert(badgeDefinitions).values([
@@ -57,30 +71,68 @@ describe("Leaderboard Module", () => {
         ]);
 
         // 4. Create Leaderboard Rewards
+        rankOneRewardId = uuidv7();
+        rankTwoRewardId = uuidv7();
         await db.insert(rewards).values([
-            { id: uuidv7(), providerId: providerId, name: "Gold Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 1 },
-            { id: uuidv7(), providerId: providerId, name: "Silver Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 2 },
+            { id: rankOneRewardId, providerId: providerId, name: "Gold Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 1 },
+            { id: rankTwoRewardId, providerId: providerId, name: "Silver Trophy", type: "PRODUCT", pointsRequired: 0, stock: 10, source: "LEADERBOARD", leaderboardPosition: 2 },
         ]);
     });
 
-    it("should retrieve the leaderboard with correct ordering", async () => {
-        const res = await app.request("/leaderboard", undefined, env);
+    it("should exclude zero-point citizens, including the current user", async () => {
+        const res = await app.request("/leaderboard", {
+            headers: { "Authorization": `Bearer ${zeroPointToken}` },
+        }, env);
         expect(res.status).toBe(200);
 
         const data = await res.json() as any;
-        expect(Array.isArray(data.data)).toBe(true);
-        expect(data.data.length).toBeGreaterThanOrEqual(4);
+        expect(data.data.currentUser).toBeNull();
+        expect(data.data.entries).toHaveLength(4);
+        expect(data.data.entries.every((entry: any) => entry.points > 0)).toBe(true);
+        expect(data.data.stats).toEqual({
+            totalCitizens: 4,
+            participatingCitizens: 4,
+            totalPoints: 950,
+        });
+    });
 
-        // Verify order
-        expect(data.data[0].id).toBe(u1);
-        expect(data.data[0].leaderboardPoints).toBe(500);
-        expect(data.data[1].id).toBe(u2);
-        expect(data.data[2].id).toBe(u3);
+    it("should retrieve the leaderboard with correct ordering", async () => {
+        const res = await app.request("/leaderboard?limit=3", {
+            headers: { "Authorization": `Bearer ${citizenToken}` },
+        }, env);
+        expect(res.status).toBe(200);
+
+        const data = await res.json() as any;
+        expect(data.data.entries).toHaveLength(3);
+
+        expect(data.data.entries[0]).toEqual({ id: u1, name: "User1", points: 500, rank: 1 });
+        expect(data.data.entries[1].id).toBe(u2);
+        expect(data.data.entries[2].id).toBe(u3);
+        expect(data.data.currentUser).toEqual({ id: u4, name: "User4", points: 50, rank: 4 });
+        expect(data.data.stats).toEqual({
+            totalCitizens: 4,
+            participatingCitizens: 4,
+            totalPoints: 950,
+        });
+        expect(data.data.rewards.map((reward: any) => reward.rank)).toEqual([1, 2]);
+        expect(data.data.entries.some((entry: any) => entry.name === "LB Admin")).toBe(false);
+        expect(data.data.entries.some((entry: any) => entry.name === "Inactive User")).toBe(false);
+    });
+
+    it("should require an active session to retrieve the leaderboard", async () => {
+        const res = await app.request("/leaderboard", undefined, env);
+        expect(res.status).toBe(401);
     });
 
     it("should process distribution and reset points", async () => {
         const month = new Date().getMonth() + 1; // Current month
         const year = new Date().getFullYear();
+        const { drizzle } = await import("drizzle-orm/d1");
+        const { rewards } = await import("../../db/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = drizzle(env.DB);
+        expect((await db.select().from(rewards).where(eq(rewards.id, rankOneRewardId)).get())?.stock).toBe(10);
+        expect((await db.select().from(rewards).where(eq(rewards.id, rankTwoRewardId)).get())?.stock).toBe(10);
 
         const res = await app.request("/leaderboard/distribute", {
             method: "POST",
@@ -91,9 +143,19 @@ describe("Leaderboard Module", () => {
             body: JSON.stringify({ month, year })
         }, env);
 
-        expect(res.status).toBe(200);
         const data = await res.json() as any;
+        expect(res.status, JSON.stringify(data)).toBe(200);
         expect(data.success).toBe(true);
+
+        const repeated = await app.request("/leaderboard/distribute", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ month, year })
+        }, env);
+        expect(repeated.status).toBe(409);
     });
 
     it("should have reset leaderboard points but kept balance intact", async () => {
@@ -112,7 +174,7 @@ describe("Leaderboard Module", () => {
 
     it("should have awarded badges to top 3 and rewards up to available ranks", async () => {
         const { drizzle } = await import("drizzle-orm/d1");
-        const { badgeAwards, rewardRedemptions } = await import("../../db/schema");
+        const { badgeAwards, rewardRedemptions, rewards } = await import("../../db/schema");
         const { eq } = await import("drizzle-orm");
         const db = drizzle(env.DB);
 
@@ -140,5 +202,9 @@ describe("Leaderboard Module", () => {
         // Check u4 (Rank 4)
         const u4Badges = await db.select().from(badgeAwards).where(eq(badgeAwards.userId, u4)).all();
         expect(u4Badges.length).toBe(0); // None
+
+        const configuredRewards = await db.select().from(rewards).where(eq(rewards.source, "LEADERBOARD")).all();
+        expect(configuredRewards.find((reward) => reward.id === rankOneRewardId)?.stock).toBe(9);
+        expect(configuredRewards.find((reward) => reward.id === rankTwoRewardId)?.stock).toBe(9);
     });
 });

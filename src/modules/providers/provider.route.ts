@@ -1,10 +1,46 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./provider.controller";
-import { paramSchema, createProviderSchema, fullUpdateProviderSchema, partialUpdateProviderSchema, updateProviderStatusSchema } from "./provider.schema";
+import { adminProviderListQuerySchema, paramSchema, createProviderSchema, fullUpdateProviderSchema, partialUpdateProviderSchema, updateProviderStatusSchema } from "./provider.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const providerRouter = new Hono();
+
+providerRouter.get(
+    "/admin",
+    describeRoute({
+        summary: "Get Providers for Admin Management",
+        description: "Admin ONLY. Returns a searchable, filterable, paginated provider list including owner information.",
+        tags: ["Providers"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Admin providers retrieved successfully" },
+            403: { description: "Forbidden" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    validator("query", adminProviderListQuerySchema),
+    controller.getAdminProviders,
+);
+
+providerRouter.get(
+    "/admin/:providerId",
+    describeRoute({
+        summary: "Get Provider Admin Detail",
+        description: "Admin ONLY. Returns provider ownership, completed-point totals, active-product totals, and Point Shop products.",
+        tags: ["Providers"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Admin provider detail retrieved successfully" },
+            404: { description: "Provider not found" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    validator("param", paramSchema),
+    controller.getAdminProviderById,
+);
 
 providerRouter.get(
     "/",
@@ -19,6 +55,23 @@ providerRouter.get(
         },
     }),
     controller.getAllProviders,
+);
+
+providerRouter.get(
+    "/me",
+    describeRoute({
+        summary: "Get Current User Provider",
+        description: "Returns the authenticated user's provider registration, approval status, dashboard statistics, and products.",
+        tags: ["Providers"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Current provider retrieved successfully" },
+            404: { description: "The current user has not registered a provider" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN", "CITIZEN"]),
+    controller.getMyProvider,
 );
 
 providerRouter.get(

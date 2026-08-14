@@ -24,6 +24,15 @@ export const createAnnouncement = async (c: Context) => {
     return ApiResponse.created(c, "Announcement created successfully", data);
 };
 
+export const updateAnnouncement = async (c: Context) => {
+    const id = c.req.param("id") as string;
+    const payload = c.req.valid("json" as never) as any;
+
+    const data = await announcementService.updateAnnouncement(c, id, payload);
+
+    return ApiResponse.ok(c, "Announcement updated successfully", data);
+};
+
 export const deleteAnnouncement = async (c: Context) => {
     const id = c.req.param("id") as string;
 
@@ -36,5 +45,6 @@ export default {
     getAnnouncements,
     getAnnouncementById,
     createAnnouncement,
+    updateAnnouncement,
     deleteAnnouncement,
 };

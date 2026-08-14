@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./reward-redemption.controller";
-import { paramSchema, createRedemptionSchema, updateRedemptionStatusSchema } from "./reward-redemption.schema";
+import { paramSchema, claimRedemptionSchema, createRedemptionSchema, updateRedemptionStatusSchema } from "./reward-redemption.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 import { z } from "zod";
 
@@ -21,6 +21,25 @@ rewardRedemptionRouter.get(
     requireAuth,
     requireRole(["ADMIN"]),
     controller.getAllRedemptions,
+);
+
+rewardRedemptionRouter.post(
+    "/claim",
+    describeRoute({
+        summary: "Claim Reward Redemption",
+        description: "Admin or the owning provider completes a pending redemption using the signed claim token carried by the resident's QR code.",
+        tags: ["Reward Redemptions"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Redemption completed successfully" },
+            400: { description: "Invalid, expired, or already-used claim token" },
+            403: { description: "Caller does not own the reward provider" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN", "CITIZEN"]),
+    validator("json", claimRedemptionSchema),
+    controller.claimRedemption,
 );
 
 rewardRedemptionRouter.get(

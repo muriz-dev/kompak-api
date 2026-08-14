@@ -1,7 +1,7 @@
-import { eq, and, desc } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { getDb } from "../../db/connection";
-import { rewardRedemptions, users, rewards } from "../../db/schema";
+import { rewardRedemptions } from "../../db/schema";
 import { uuidv7 } from "uuidv7";
 
 export const getAll = async (c: Context) => {
@@ -39,6 +39,24 @@ export const getByUserId = async (c: Context, userId: string) => {
     });
 };
 
+export const getByUserAndIdempotencyKey = async (
+    c: Context,
+    userId: string,
+    idempotencyKey: string,
+) => {
+    const db = getDb(c.env.DB);
+    return db.query.rewardRedemptions.findFirst({
+        where: and(
+            eq(rewardRedemptions.userId, userId),
+            eq(rewardRedemptions.idempotencyKey, idempotencyKey),
+        ),
+        with: {
+            reward: true,
+            provider: true,
+        },
+    });
+};
+
 export const getByProviderId = async (c: Context, providerId: string) => {
     const db = getDb(c.env.DB);
     return db.query.rewardRedemptions.findMany({
@@ -56,36 +74,30 @@ export const getByProviderId = async (c: Context, providerId: string) => {
 };
 
 export const createWithTransaction = async (
-    c: Context, 
-    data: { userId: string; rewardId: string; providerId: string; pointsSpent: number },
-    currentStock: number,
-    currentBalance: number
+    c: Context,
+    data: {
+        userId: string;
+        rewardId: string;
+        providerId: string;
+        pointsSpent: number;
+        idempotencyKey: string;
+        expiresAt: Date;
+    },
 ) => {
     const db = getDb(c.env.DB);
-    
-    const redemptionId = uuidv7();
-    
-    const insertRedemption = db.insert(rewardRedemptions).values({
-        id: redemptionId,
+
+    const [redemption] = await db.insert(rewardRedemptions).values({
+        id: uuidv7(),
         userId: data.userId,
         rewardId: data.rewardId,
         providerId: data.providerId,
         pointsSpent: data.pointsSpent,
-        status: "PENDING"
+        idempotencyKey: data.idempotencyKey,
+        status: "PENDING",
+        expiresAt: data.expiresAt,
     }).returning();
-    
-    const updateUser = db.update(users).set({
-        balance: currentBalance - data.pointsSpent,
-        updatedAt: new Date()
-    }).where(eq(users.id, data.userId));
-    
-    const updateReward = db.update(rewards).set({
-        stock: currentStock - 1,
-        updatedAt: new Date()
-    }).where(eq(rewards.id, data.rewardId));
-    
-    const results = await db.batch([insertRedemption, updateUser, updateReward]);
-    return results[0][0]; // Return the created redemption
+
+    return redemption;
 };
 
 export const updateStatus = async (
@@ -102,42 +114,21 @@ export const updateStatus = async (
     
     const results = await db.update(rewardRedemptions)
         .set(updateData)
-        .where(eq(rewardRedemptions.id, id))
+        .where(and(
+            eq(rewardRedemptions.id, id),
+            eq(rewardRedemptions.status, "PENDING"),
+        ))
         .returning();
         
     return results[0];
-};
-
-export const refundTransaction = async (
-    c: Context, 
-    redemptionId: string, 
-    userId: string, 
-    pointsToRefund: number,
-    rewardId: string,
-    currentBalance: number,
-    currentStock: number
-) => {
-    const db = getDb(c.env.DB);
-    
-    const updateUser = db.update(users).set({
-        balance: currentBalance + pointsToRefund,
-        updatedAt: new Date()
-    }).where(eq(users.id, userId));
-    
-    const updateReward = db.update(rewards).set({
-        stock: currentStock + 1,
-        updatedAt: new Date()
-    }).where(eq(rewards.id, rewardId));
-    
-    await db.batch([updateUser, updateReward]);
 };
 
 export default {
     getAll,
     getById,
     getByUserId,
+    getByUserAndIdempotencyKey,
     getByProviderId,
     createWithTransaction,
     updateStatus,
-    refundTransaction
 };

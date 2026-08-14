@@ -1,7 +1,9 @@
-import type { Context, Env, ValidationTargets } from "hono";
+import type { Context, ValidationTargets } from "hono";
 import authService from "./auth.service";
 import type { LoginSchema } from "./auth.schema";
 import { ApiResponse } from "../../utils/api-response";
+import { toSafeUser } from "../users/safe-user";
+import type { Env } from "../../types";
 
 type AuthContext = Context<Env, any, {
     in: Pick<ValidationTargets, 'json'> & {
@@ -21,9 +23,12 @@ export const login = async (ctx: AuthContext) => {
 };
 
 export const getMe = async (ctx: Context<Env>) => {
-    const payload = ctx.get("jwtPayload") as { id: string };
-    const user = await authService.getMe(ctx, payload.id);
-    return ApiResponse.ok(ctx, "Current session retrieved successfully", user);
+    const currentUser = ctx.get("currentUser");
+    return ApiResponse.ok(
+        ctx,
+        "Current session retrieved successfully",
+        toSafeUser(currentUser)
+    );
 };
 
 export const logout = async (ctx: Context<Env>) => {

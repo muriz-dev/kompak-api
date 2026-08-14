@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import * as controller from "./event.controller";
-import { paramSchema, querySchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
+import { adminQuerySchema, paramSchema, querySchema, createEventSchema, fullUpdateEventSchema, partialUpdateEventSchema } from "./event.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const eventRouter = new Hono();
@@ -23,10 +23,63 @@ eventRouter.get(
 );
 
 eventRouter.get(
+    "/admin",
+    describeRoute({
+        summary: "Get Events for Admin Management",
+        description: "Admin ONLY. Retrieves events in every lifecycle status. Optionally filter with `?status=DRAFT|PUBLISHED|CLOSED|CANCELLED`.",
+        tags: ["Events"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: {
+                description: "Admin events retrieved successfully",
+            },
+            401: {
+                description: "Authentication required",
+            },
+            403: {
+                description: "Admin role required",
+            },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("query", adminQuerySchema),
+    controller.getAllAdminEvents,
+);
+
+eventRouter.get(
+    "/admin/:eventId",
+    describeRoute({
+        summary: "Get Event by ID for Admin Management",
+        description: "Admin ONLY. Retrieves an event in any lifecycle state, including draft and cancelled events, for detail and edit screens.",
+        tags: ["Events"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: {
+                description: "Admin event retrieved successfully",
+            },
+            401: {
+                description: "Authentication required",
+            },
+            403: {
+                description: "Admin role required",
+            },
+            404: {
+                description: "Event not found",
+            },
+        },
+    }),
+    requireAuth,
+    requireRole(['ADMIN']),
+    validator("param", paramSchema),
+    controller.getManagedEventById,
+);
+
+eventRouter.get(
     "/:eventId",
     describeRoute({
         summary: "Get Event by ID",
-        description: "Retrieves the full details of a specific event. Use this to populate the Event Detail page. Contains location coordinates, radius, and schedule required for check-in validation.",
+        description: "Retrieves the full details of a published or completed event. Draft and cancelled events are not exposed through this public endpoint. Contains location coordinates, radius, and schedule required for check-in validation.",
         tags: ["Events"],
         responses: {
             200: {
@@ -45,7 +98,7 @@ eventRouter.post(
     "/",
     describeRoute({
         summary: "Create Event",
-        description: "Admin ONLY. Creates a new community event. Note that new events are created in 'DRAFT' status by default. An admin must explicitly publish it via an update request for it to be visible to citizens.",
+        description: "Admin ONLY. Creates a new community event. The status defaults to 'DRAFT' when omitted; send 'PUBLISHED' to create and publish it immediately. An optional bannerUrl may reference an image uploaded through the storage API.",
         tags: ["Events"],
         security: [{ bearerAuth: [] }],
         responses: {
@@ -53,7 +106,7 @@ eventRouter.post(
                 description: "Event created successfully",
             },
             400: {
-                description: "Invalid request body",
+                description: "Invalid event data, schedule, or location",
             },
         },
     }),
@@ -101,7 +154,7 @@ eventRouter.patch(
                 description: "Event updated successfully",
             },
             400: {
-                description: "Invalid request body",
+                description: "Invalid request body or event status transition",
             },
             404: {
                 description: "Event not found",

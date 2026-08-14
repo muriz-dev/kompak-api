@@ -4,6 +4,7 @@
 -- 0. Clear existing data
 DELETE FROM "notifications";
 DELETE FROM "announcements";
+DELETE FROM "leaderboard_distributions";
 DELETE FROM "badge_awards";
 DELETE FROM "badge_definitions";
 DELETE FROM "reward_redemptions";
@@ -48,9 +49,9 @@ INSERT INTO "event_transactions" (id, user_id, attendance_id, event_id, points, 
 ('019fd748-b708-7f8c-a6e5-650f05c76689', '019fd748-b69e-71af-b151-5b2456ec8c4d', '019fd748-b708-7f8c-a6e5-650d6ea0a43e', '019fd748-b708-7f8c-a6e5-650813f634ae', 25, 1783431294728);
 
 -- 7. Reward Redemptions
-INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, status, created_at, updated_at) VALUES
-('019fd748-b708-7f8c-a6e5-6510228c6b96', '019fd748-b69e-71af-b151-5b2456ec8c4d', '019fd748-b708-7f8c-a6e5-650ac5b181e7', '019fd748-b708-7f8c-a6e5-65056407edd8', 150, 'COMPLETED', 1785159294728, 1785159294728),
-('019fd748-b708-7f8c-a6e5-65119651f519', '019fd748-b69e-71af-b151-5b23c4304d0e', '019fd748-b708-7f8c-a6e5-6509812392e2', '019fd748-b708-7f8c-a6e5-65056407edd8', 500, 'PENDING', 1785850494728, 1785850494728);
+INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, idempotency_key, status, completed_at, expires_at, created_at, updated_at) VALUES
+('019fd748-b708-7f8c-a6e5-6510228c6b96', '019fd748-b69e-71af-b151-5b2456ec8c4d', '019fd748-b708-7f8c-a6e5-650ac5b181e7', '019fd748-b708-7f8c-a6e5-65056407edd8', 150, 'seed-redemption-completed', 'COMPLETED', 1785159294728, 1785764094728, 1785159294728, 1785159294728),
+('019fd748-b708-7f8c-a6e5-65119651f519', '019fd748-b69e-71af-b151-5b23c4304d0e', '019fd748-b708-7f8c-a6e5-6509812392e2', '019fd748-b708-7f8c-a6e5-65056407edd8', 500, 'seed-redemption-pending', 'PENDING', NULL, 1786455294728, 1785850494728, 1785850494728);
 
 -- 8. Badge Definitions
 INSERT INTO "badge_definitions" (id, name, description, category, criteria, created_at, updated_at) VALUES

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { describeRoute, validator } from "hono-openapi";
 import announcementController from "./announcement.controller";
-import { createAnnouncementSchema } from "./announcement.schema";
+import { createAnnouncementSchema, updateAnnouncementSchema } from "./announcement.schema";
 import { requireAuth, requireRole } from "../../middlewares/auth";
 
 const router = new Hono();
@@ -53,6 +53,25 @@ router.get(
     }),
     requireAuth,
     announcementController.getAnnouncementById
+);
+
+router.patch(
+    "/:id",
+    describeRoute({
+        summary: "Update Announcement",
+        description: "Admin ONLY. Updates the title or description of an existing announcement.",
+        tags: ["Announcements"],
+        security: [{ bearerAuth: [] }],
+        responses: {
+            200: { description: "Announcement updated successfully" },
+            403: { description: "Forbidden" },
+            404: { description: "Announcement not found" },
+        },
+    }),
+    requireAuth,
+    requireRole(["ADMIN"]),
+    validator("json", updateAnnouncementSchema),
+    announcementController.updateAnnouncement
 );
 
 router.delete(
