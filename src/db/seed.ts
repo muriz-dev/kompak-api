@@ -8,19 +8,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Helper to escape strings for SQL
-const escapeStr = (str: string | null | undefined) => {
+const escapeStr = (str: string | number | null | undefined) => {
     if (str === null || str === undefined) return "NULL";
-    return `'${str.replace(/'/g, "''")}'`;
+    if (typeof str === "number") return str;
+    return `'${String(str).replace(/'/g, "''")}'`;
 };
 
-// Helper to get current timestamp in ms
+// Time helpers
 const now = () => Date.now();
+const days = (n: number) => n * 24 * 60 * 60 * 1000;
+const hours = (n: number) => n * 60 * 60 * 1000;
 
-// Generate SQL
-let sql = `-- Kompak API Database Seed
+let sql = `-- Kompak API Database Seed (Extended)
 -- Generated on ${new Date().toISOString()}
 
--- 0. Clear existing data
+PRAGMA foreign_keys = OFF;
 DELETE FROM "notifications";
 DELETE FROM "announcements";
 DELETE FROM "leaderboard_distributions";
@@ -33,100 +35,191 @@ DELETE FROM "rewards";
 DELETE FROM "providers";
 DELETE FROM "events";
 DELETE FROM "users";
+PRAGMA foreign_keys = ON;
 
 `;
-
-// 1. Users
-const adminId = uuidv7();
-const user1Id = uuidv7();
-const user2Id = uuidv7();
-const user3Id = uuidv7();
 
 const adminHash = bcrypt.hashSync('admin123', 10);
 const userHash = bcrypt.hashSync('user123', 10);
 
+// --- 1. Users ---
 sql += `-- 1. Users\n`;
-sql += `INSERT INTO "users" (id, name, phone_number, birth_date, email, password, face_embedding_id, balance, leaderboard_points, status, role, created_at, updated_at) VALUES
-(${escapeStr(adminId)}, 'Admin User', '081234567890', '1990-01-01', 'admin@kompak.app', ${escapeStr(adminHash)}, 'admin-face-id', 10000, 0, 'ACTIVE', 'ADMIN', ${now()}, ${now()}),
-(${escapeStr(user1Id)}, 'John Doe', '081234567891', '1995-05-05', 'john@example.com', ${escapeStr(userHash)}, 'john-face-id', 500, 50, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
-(${escapeStr(user2Id)}, 'Jane Smith', '081234567892', '1992-02-02', 'jane@example.com', ${escapeStr(userHash)}, 'jane-face-id', 1500, 150, 'ACTIVE', 'CITIZEN', ${now()}, ${now()}),
-(${escapeStr(user3Id)}, 'Pending User', '081234567893', '1998-08-08', 'pending@example.com', ${escapeStr(userHash)}, 'pending-face-id', 0, 0, 'PENDING', 'CITIZEN', ${now()}, ${now()});\n`;
+const users: any[] = [];
+const adminId = uuidv7();
+users.push({ id: adminId, name: 'Admin Pusat', phone: '0811000000', email: 'admin@kompak.app', role: 'ADMIN', status: 'ACTIVE', bal: 10000, lp: 0 });
 
-// 2. Providers
+const citizenNames = [
+    'Budi Santoso', 'Siti Aminah', 'Andi Pratama', 'Dewi Lestari', 'Agus Setiawan', 
+    'Ayu Wandira', 'Hendra Gunawan', 'Rini Yulianti', 'Iwan Fals', 'Maya Sari', 
+    'Reza Rahadian', 'Dina Mariana', 'Fajar Sidik', 'Eka Putra', 'Rina Nose', 
+    'Tono Suprapto', 'Sari Nila', 'Gilang Dirga', 'Nadia Vega', 'Putra Siregar'
+];
+
+for (let i = 0; i < citizenNames.length; i++) {
+    const isActive = i < 16; // 16 active, 4 pending
+    users.push({
+        id: uuidv7(),
+        name: citizenNames[i],
+        phone: `08120000${String(i).padStart(2, '0')}`,
+        email: `citizen${i + 1}@example.com`,
+        role: 'CITIZEN',
+        status: isActive ? 'ACTIVE' : 'PENDING',
+        bal: isActive ? 10000 : 0,
+        lp: isActive ? Math.floor(Math.random() * 500) : 0
+    });
+}
+
+sql += `INSERT INTO "users" (id, name, phone_number, birth_date, email, password, face_embedding_id, balance, leaderboard_points, status, role, created_at, updated_at) VALUES\n`;
+sql += users.map(u => `(${escapeStr(u.id)}, ${escapeStr(u.name)}, ${escapeStr(u.phone)}, '1990-01-01', ${escapeStr(u.email)}, ${escapeStr(u.id === adminId ? adminHash : userHash)}, 'face-${u.id}', ${u.bal}, ${u.lp}, ${escapeStr(u.status)}, ${escapeStr(u.role)}, ${now()}, ${now()})`).join(',\n') + ';\n';
+
+// --- 2. Providers ---
 sql += `\n-- 2. Providers\n`;
-const provider1Id = uuidv7();
-sql += `INSERT INTO "providers" (id, owner_id, name, address, latitude, longitude, status, created_at, updated_at) VALUES
-(${escapeStr(provider1Id)}, ${escapeStr(adminId)}, 'Toko Kompak Makmur', 'Jl. Kebahagiaan No. 1', -6.200000, 106.816666, 'VERIFIED', ${now()}, ${now()});\n`;
+const providers = [
+    { id: uuidv7(), name: 'Toko Makmur Jaya', address: 'Jl. Sudirman No.10', lat: -6.200, lng: 106.816, status: 'VERIFIED' },
+    { id: uuidv7(), name: 'Warkop Berkah', address: 'Jl. Thamrin No.5', lat: -6.190, lng: 106.820, status: 'VERIFIED' },
+    { id: uuidv7(), name: 'Klinik Sehat', address: 'Jl. Gatot Subroto No.8', lat: -6.230, lng: 106.830, status: 'VERIFIED' },
+    { id: uuidv7(), name: 'Warung Bu Ani', address: 'Jl. Kemang Raya No.12', lat: -6.260, lng: 106.810, status: 'PENDING' },
+    { id: uuidv7(), name: 'Toko Buku Pintar', address: 'Jl. Melawai No.3', lat: -6.240, lng: 106.800, status: 'VERIFIED' }
+];
 
-// 3. Events
+sql += `INSERT INTO "providers" (id, owner_id, name, address, latitude, longitude, status, created_at, updated_at) VALUES\n`;
+sql += providers.map(p => `(${escapeStr(p.id)}, ${escapeStr(adminId)}, ${escapeStr(p.name)}, ${escapeStr(p.address)}, ${p.lat}, ${p.lng}, ${escapeStr(p.status)}, ${now()}, ${now()})`).join(',\n') + ';\n';
+
+// --- 3. Events ---
 sql += `\n-- 3. Events\n`;
-const event1Id = uuidv7();
-const event2Id = uuidv7();
-const pastEventId = uuidv7();
-const oneDayMs = 24 * 60 * 60 * 1000;
-const twoHoursMs = 2 * 60 * 60 * 1000;
+const eventData = [
+    { title: 'Kerja Bakti RT 01', offset: -10, status: 'CLOSED', points: 100 },
+    { title: 'Senam Pagi Bersama', offset: -5, status: 'CLOSED', points: 50 },
+    { title: 'Rapat Warga Bulanan', offset: -2, status: 'CLOSED', points: 25 },
+    { title: 'Lomba 17-an', offset: -1, status: 'CLOSED', points: 150 },
+    { title: 'Penyuluhan Kesehatan', offset: 0, status: 'PUBLISHED', points: 75 },
+    { title: 'Vaksinasi Massal', offset: 1, status: 'PUBLISHED', points: 200 },
+    { title: 'Bazar Murah Warga', offset: 3, status: 'PUBLISHED', points: 50 },
+    { title: 'Pemilihan Ketua RT', offset: 5, status: 'PUBLISHED', points: 100 },
+    { title: 'Donor Darah Rutin', offset: 7, status: 'PUBLISHED', points: 150 },
+    { title: 'Pelatihan UMKM', offset: 10, status: 'PUBLISHED', points: 80 },
+    { title: 'Jalan Sehat Keluarga', offset: 14, status: 'PUBLISHED', points: 100 },
+    { title: 'Siskamling Akbar', offset: 20, status: 'DRAFT', points: 50 },
+    { title: 'Renovasi Posyandu', offset: 25, status: 'DRAFT', points: 300 },
+    { title: 'Festival Budaya Lokal', offset: 30, status: 'DRAFT', points: 250 },
+    { title: 'Lomba Masak Antar RT', offset: 2, status: 'CANCELLED', points: 100 },
+];
 
-sql += `INSERT INTO "events" (id, created_by, title, description, event_date, attendance_start_time, attendance_end_time, reward_points, latitude, longitude, radius_meters, status, created_at, updated_at) VALUES
-(${escapeStr(event1Id)}, ${escapeStr(adminId)}, 'Kerja Bakti RT 01', 'Membersihkan selokan dan lingkungan sekitar.', ${now() + oneDayMs}, ${now() + oneDayMs - twoHoursMs}, ${now() + oneDayMs + twoHoursMs}, 100, -6.200000, 106.816666, 100, 'PUBLISHED', ${now()}, ${now()}),
-(${escapeStr(event2Id)}, ${escapeStr(adminId)}, 'Senam Sehat Bersama', 'Senam pagi di lapangan warga.', ${now() + (oneDayMs * 5)}, ${now() + (oneDayMs * 5) - twoHoursMs}, ${now() + (oneDayMs * 5) + twoHoursMs}, 50, -6.210000, 106.820000, 50, 'PUBLISHED', ${now()}, ${now()}),
-(${escapeStr(pastEventId)}, ${escapeStr(adminId)}, 'Rapat Warga Bulanan', 'Rapat bulanan untuk membahas program kerja.', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30) - twoHoursMs}, ${now() - (oneDayMs * 30) + twoHoursMs}, 25, -6.190000, 106.810000, 150, 'CLOSED', ${now() - (oneDayMs * 35)}, ${now() - (oneDayMs * 35)});\n`;
+const events = eventData.map(e => ({
+    id: uuidv7(),
+    title: e.title,
+    desc: 'Deskripsi panjang untuk ' + e.title + '. Kegiatan ini sangat bermanfaat bagi warga sekitar.',
+    date: now() + days(e.offset),
+    pts: e.points,
+    lat: -6.200 + (Math.random() * 0.05),
+    lng: 106.816 + (Math.random() * 0.05),
+    status: e.status
+}));
 
-// 4. Rewards
+sql += `INSERT INTO "events" (id, created_by, title, description, event_date, attendance_start_time, attendance_end_time, reward_points, latitude, longitude, radius_meters, status, created_at, updated_at) VALUES\n`;
+sql += events.map(e => `(${escapeStr(e.id)}, ${escapeStr(adminId)}, ${escapeStr(e.title)}, ${escapeStr(e.desc)}, ${e.date}, ${e.date - hours(2)}, ${e.date + hours(4)}, ${e.pts}, ${e.lat}, ${e.lng}, 150, ${escapeStr(e.status)}, ${now()}, ${now()})`).join(',\n') + ';\n';
+
+// --- 4. Rewards ---
 sql += `\n-- 4. Rewards\n`;
-const storeReward1Id = uuidv7();
-const storeReward2Id = uuidv7();
-const leaderboardReward1Id = uuidv7();
+const rewardData = [
+    { pIdx: 0, name: 'Voucher Sembako 50rb', pts: 500, stock: 20, type: 'VOUCHER', src: 'POINT_SHOP' },
+    { pIdx: 0, name: 'Beras 5kg', pts: 1000, stock: 10, type: 'PRODUCT', src: 'POINT_SHOP' },
+    { pIdx: 1, name: 'Kopi Gratis', pts: 100, stock: 50, type: 'VOUCHER', src: 'POINT_SHOP' },
+    { pIdx: 1, name: 'Indomie Goreng + Telur', pts: 150, stock: 30, type: 'PRODUCT', src: 'POINT_SHOP' },
+    { pIdx: 2, name: 'Cek Tensi Gratis', pts: 200, stock: 100, type: 'SERVICE', src: 'POINT_SHOP' },
+    { pIdx: 2, name: 'Vitamin C 1 Botol', pts: 350, stock: 15, type: 'PRODUCT', src: 'POINT_SHOP' },
+    { pIdx: 4, name: 'Buku Tulis 1 Lusin', pts: 250, stock: 40, type: 'PRODUCT', src: 'POINT_SHOP' },
+    { pIdx: 4, name: 'Pensil Warna', pts: 150, stock: 25, type: 'PRODUCT', src: 'POINT_SHOP' },
+    { pIdx: 0, name: 'TV LED 32 Inch', pts: 0, stock: 1, type: 'PRODUCT', src: 'LEADERBOARD', pos: 1 },
+    { pIdx: 0, name: 'Sepeda Lipat', pts: 0, stock: 1, type: 'PRODUCT', src: 'LEADERBOARD', pos: 2 },
+    { pIdx: 0, name: 'Rice Cooker', pts: 0, stock: 1, type: 'PRODUCT', src: 'LEADERBOARD', pos: 3 },
+    { pIdx: 0, name: 'Kipas Angin', pts: 0, stock: 1, type: 'PRODUCT', src: 'LEADERBOARD', pos: 4 },
+];
 
-sql += `INSERT INTO "rewards" (id, provider_id, name, points_required, stock, type, source, leaderboard_position, status, created_at, updated_at) VALUES
-(${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 'T-Shirt Kompak', 500, 50, 'PRODUCT', 'POINT_SHOP', NULL, 'ACTIVE', ${now()}, ${now()}),
-(${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 'Coffee Voucher', 150, 100, 'VOUCHER', 'POINT_SHOP', NULL, 'ACTIVE', ${now()}, ${now()}),
-(${escapeStr(leaderboardReward1Id)}, ${escapeStr(provider1Id)}, 'Sepeda Gunung', 0, 1, 'PRODUCT', 'LEADERBOARD', 1, 'ACTIVE', ${now()}, ${now()});\n`;
+const rewards = rewardData.map(r => ({
+    id: uuidv7(),
+    providerId: providers[r.pIdx].id,
+    name: r.name,
+    pts: r.pts,
+    stock: r.stock,
+    type: r.type,
+    src: r.src,
+    pos: r.pos || null
+}));
 
-// 5. Attendances
-sql += `\n-- 5. Attendances\n`;
-const att1Id = uuidv7();
-const att2Id = uuidv7();
-sql += `INSERT INTO "attendances" (id, user_id, event_id, status, verified_at, created_at, updated_at) VALUES
-(${escapeStr(att1Id)}, ${escapeStr(user1Id)}, ${escapeStr(pastEventId)}, 'PRESENT', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}),
-(${escapeStr(att2Id)}, ${escapeStr(user2Id)}, ${escapeStr(pastEventId)}, 'PRESENT', ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)}, ${now() - (oneDayMs * 30)});\n`;
+sql += `INSERT INTO "rewards" (id, provider_id, name, points_required, stock, type, source, leaderboard_position, status, created_at, updated_at) VALUES\n`;
+sql += rewards.map(r => `(${escapeStr(r.id)}, ${escapeStr(r.providerId)}, ${escapeStr(r.name)}, ${r.pts}, ${r.stock}, ${escapeStr(r.type)}, ${escapeStr(r.src)}, ${escapeStr(r.pos)}, 'ACTIVE', ${now()}, ${now()})`).join(',\n') + ';\n';
 
-// 6. Event Transactions
-sql += `\n-- 6. Event Transactions\n`;
-sql += `INSERT INTO "event_transactions" (id, user_id, attendance_id, event_id, points, created_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(att1Id)}, ${escapeStr(pastEventId)}, 25, ${now() - (oneDayMs * 30)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(att2Id)}, ${escapeStr(pastEventId)}, 25, ${now() - (oneDayMs * 30)});\n`;
+// --- 5. Attendances & 6. Transactions ---
+sql += `\n-- 5. Attendances & 6. Event Transactions\n`;
+const attendances: any[] = [];
+const transactions: any[] = [];
 
-// 7. Reward Redemptions
+const closedEvents = events.filter(e => e.status === 'CLOSED');
+const activeUsers = users.filter(u => u.status === 'ACTIVE' && u.role === 'CITIZEN');
+
+closedEvents.forEach(evt => {
+    // Random 8-15 users attend each past event
+    const shuffled = [...activeUsers].sort(() => 0.5 - Math.random());
+    const attendees = shuffled.slice(0, 8 + Math.floor(Math.random() * 7));
+    
+    attendees.forEach(u => {
+        const attId = uuidv7();
+        attendances.push(`(${escapeStr(attId)}, ${escapeStr(u.id)}, ${escapeStr(evt.id)}, 'PRESENT', ${evt.date}, ${evt.date}, ${evt.date})`);
+        transactions.push(`(${escapeStr(uuidv7())}, ${escapeStr(u.id)}, ${escapeStr(attId)}, ${escapeStr(evt.id)}, ${evt.pts}, ${evt.date})`);
+    });
+});
+
+if (attendances.length > 0) {
+    sql += `INSERT INTO "attendances" (id, user_id, event_id, status, verified_at, created_at, updated_at) VALUES\n${attendances.join(',\n')};\n`;
+    sql += `INSERT INTO "event_transactions" (id, user_id, attendance_id, event_id, points, created_at) VALUES\n${transactions.join(',\n')};\n`;
+}
+
+// --- 7. Reward Redemptions ---
 sql += `\n-- 7. Reward Redemptions\n`;
-sql += `INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, idempotency_key, status, completed_at, expires_at, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(storeReward2Id)}, ${escapeStr(provider1Id)}, 150, 'seed-redemption-completed', 'COMPLETED', ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 3)}, ${now() - (oneDayMs * 10)}, ${now() - (oneDayMs * 10)}),
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, ${escapeStr(storeReward1Id)}, ${escapeStr(provider1Id)}, 500, 'seed-redemption-pending', 'PENDING', NULL, ${now() + (oneDayMs * 5)}, ${now() - (oneDayMs * 2)}, ${now() - (oneDayMs * 2)});\n`;
+const redemptions: any[] = [];
+const shopRewards = rewards.filter(r => r.src === 'POINT_SHOP');
 
-// 8. Badge Definitions
+activeUsers.slice(0, 12).forEach((u, i) => {
+    const rew = shopRewards[i % shopRewards.length];
+    const statuses = ['PENDING', 'COMPLETED', 'REJECTED', 'CANCELLED'];
+    const status = statuses[i % statuses.length];
+    
+    const created = now() - days(Math.random() * 10);
+    redemptions.push(`(${escapeStr(uuidv7())}, ${escapeStr(u.id)}, ${escapeStr(rew.id)}, ${escapeStr(rew.providerId)}, ${rew.pts}, 'red-${uuidv7()}', ${escapeStr(status)}, ${status === 'COMPLETED' ? created + hours(2) : 'NULL'}, ${created + days(7)}, ${created}, ${created})`);
+});
+
+sql += `INSERT INTO "reward_redemptions" (id, user_id, reward_id, provider_id, points_spent, idempotency_key, status, completed_at, expires_at, created_at, updated_at) VALUES\n${redemptions.join(',\n')};\n`;
+
+// --- 8 & 9. Badges ---
 sql += `\n-- 8. Badge Definitions\n`;
-const badge1Id = uuidv7();
+const badge1 = uuidv7();
+const badge2 = uuidv7();
 sql += `INSERT INTO "badge_definitions" (id, name, description, category, criteria, created_at, updated_at) VALUES
-(${escapeStr(badge1Id)}, 'Top 3 Bulan Ini', 'Masuk ke top 3 leaderboard bulanan.', 'LEADERBOARD', 'rank <= 3', ${now()}, ${now()});\n`;
+(${escapeStr(badge1)}, 'Top 3 Bulan Lalu', 'Masuk ke top 3 leaderboard.', 'LEADERBOARD', 'rank <= 3', ${now()}, ${now()}),
+(${escapeStr(badge2)}, 'Warga Aktif', 'Hadir di 5 event berturut-turut.', 'EVENT', 'attendance_count >= 5', ${now()}, ${now()});\n`;
 
-// 9. Badge Awards
 sql += `\n-- 9. Badge Awards\n`;
 sql += `INSERT INTO "badge_awards" (id, user_id, badge_definition_id, leaderboard_year, leaderboard_period, reason, awarded_by, awarded_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user2Id)}, ${escapeStr(badge1Id)}, 2026, '06', 'Juara 1 Bulan Juni', ${escapeStr(adminId)}, ${now()});\n`;
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[0].id)}, ${escapeStr(badge1)}, 2026, '06', 'Juara 1', ${escapeStr(adminId)}, ${now() - days(10)}),
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[1].id)}, ${escapeStr(badge1)}, 2026, '06', 'Juara 2', ${escapeStr(adminId)}, ${now() - days(10)}),
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[2].id)}, ${escapeStr(badge2)}, NULL, NULL, 'Sangat rajin!', ${escapeStr(adminId)}, ${now() - days(2)});\n`;
 
-// 10. Announcements
+// --- 10 & 11. Announcements & Notifications ---
 sql += `\n-- 10. Announcements\n`;
 sql += `INSERT INTO "announcements" (id, created_by, title, description, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(adminId)}, 'Selamat Datang di KOMPAK!', 'Mari berpartisipasi dan raih hadiahnya.', ${now()}, ${now()});\n`;
+(${escapeStr(uuidv7())}, ${escapeStr(adminId)}, 'Selamat Datang di KOMPAK!', 'Mari berpartisipasi dalam event warga.', ${now() - days(5)}, ${now() - days(5)}),
+(${escapeStr(uuidv7())}, ${escapeStr(adminId)}, 'Pemeliharaan Sistem', 'Aplikasi akan tidak bisa diakses pada tengah malam.', ${now() - hours(2)}, ${now() - hours(2)}),
+(${escapeStr(uuidv7())}, ${escapeStr(adminId)}, 'Pengumuman Pemenang Bulan Ini', 'Selamat kepada para peraih posisi Top 3!', ${now() - days(1)}, ${now() - days(1)});\n`;
 
-// 11. Notifications
 sql += `\n-- 11. Notifications\n`;
 sql += `INSERT INTO "notifications" (id, user_id, title, message, type, is_read, created_at, updated_at) VALUES
-(${escapeStr(uuidv7())}, ${escapeStr(user1Id)}, 'Akun Disetujui', 'Selamat, akun Anda telah disetujui!', 'ACCOUNT_APPROVED', 0, ${now()}, ${now()});\n`;
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[0].id)}, 'Poin Bertambah', 'Anda mendapat 100 poin dari Kerja Bakti.', 'EVENT_REWARD', 0, ${now()}, ${now()}),
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[1].id)}, 'Redemption Sukses', 'Barang Anda bisa diambil di toko Makmur Jaya.', 'REDEMPTION_COMPLETED', 1, ${now() - days(1)}, ${now() - days(1)}),
+(${escapeStr(uuidv7())}, ${escapeStr(activeUsers[2].id)}, 'Event Dibatalkan', 'Mohon maaf Lomba Masak dibatalkan.', 'EVENT_CANCELLED', 0, ${now() - hours(12)}, ${now() - hours(12)});\n`;
 
-// Write to file
 const outDir = path.resolve(__dirname, "../../");
 const outPath = path.join(outDir, "seed.sql");
 fs.writeFileSync(outPath, sql);
 
-console.log(`✅ Seed SQL successfully generated at: ${outPath}`);
-console.log(`Run 'npm run db:seed' (which executes wrangler d1 execute) to apply it.`);
+console.log(`✅ Seed SQL successfully generated with massive data at: ${outPath}`);
